@@ -1,0 +1,67 @@
+Table User {
+  id UUID [pk]
+  name varchar
+  email varchar
+  password varchar
+  role varchar
+  created_at datetime
+  updated_at datetime
+}
+
+Table Session {
+  id UUID [pk]
+  session_id varchar
+  started_by UUID [ref: > User.id]
+  started_at datetime
+  status varchar
+}
+
+Table Device {
+  id UUID [pk]
+  name varchar
+  ip_address varchar
+  status varchar
+  last_seen datetime
+}
+
+Table SessionDevice {
+  id UUID [pk]
+  session_id UUID [ref: > Session.id]
+  device_id UUID [ref: > Device.id]
+  joined_at datetime
+}
+
+Table CommandTemplate {
+  id UUID [pk]
+  name varchar
+  description varchar
+  category varchar
+  created_by UUID [ref: > User.id]
+}
+
+Table Command {
+  id UUID [pk]
+  session_id UUID [ref: > Session.id]
+  sent_by UUID [ref: > User.id]
+  command_template_id UUID [ref: > CommandTemplate.id]
+  parameters varchar
+  sent_at datetime
+}
+
+Table CommandResponse {
+  id UUID [pk]
+  command_id UUID [ref: > Command.id]
+  device_id UUID [ref: > Device.id]
+  response_text text
+  received_at datetime
+}
+
+Table AuditLog {
+  id UUID [pk]
+  session_id UUID [ref: > Session.id]
+  actor_type varchar // "User", "Device", "System"
+  actor_id UUID
+  action varchar
+  meta json
+  created_at datetime
+}
