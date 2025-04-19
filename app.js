@@ -1,14 +1,10 @@
 import express from 'express'
 import mongoose from 'mongoose'
-import { randomUUID } from 'crypto'
+import { PORT } from './config/app.js'
+import './config/database.js'
+
 
 const app =express()
-const PORT = 4000
-
-
-mongoose.connect('mongodb://127.0.0.1:27017/commandcast')
-  .then(() => console.log('💽 Database connected'))
-  .catch(error => console.error(error))
 
 //schemas
 
