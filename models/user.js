@@ -8,3 +8,6 @@ const userSchema = new mongoose.Schema({
     role : String,
     },
     { timestamps: true })
+
+
+export const User = mongoose.model('User', userSchema)

@@ -1,90 +1,17 @@
 import express from 'express'
-import mongoose from 'mongoose'
 import { PORT } from './config/app.js'
 import './config/database.js'
+import {User} from './models/user.js'
+import {Session} from './models/session.js'
+import {CommandTemplate} from './models/commandtemplate.js'
+import {CommandResponse} from './models/commandResponse.js'
+import {Command} from './models/command.js'
+import {Client} from './models/client.js'
+import {AuditLog} from './models/auditLog.js'
+
 
 
 const app =express()
-
-//schemas
-
-const userSchema = new mongoose.Schema({
-    id : {type: Schema.Types.UUID, required: true, unique: true},
-    name:  { type: String, required: true ,unique: true},
-    email : { type: String, required: true ,unique: true},
-    password : { type: String, required: true ,unique: true},
-    role : String,
-    },
-    { timestamps: true })
-
-const sessionSchema = new mongoose.Schema({
-    id : { type: Schema.Types.UUID, required: true, unique: true },
-    session_id: { type: String, required: true },
-    started_by : { type: Schema.Types.UUID, ref: 'User', required: true },
-    clients: { type: Schema.Types.UUID, ref: 'Client'},
-    password : String,
-    role : String,
-    },
-    { timestamps: true })
-
-const clientSchema = new Schema({
-    id: { type: Schema.Types.UUID, required: true, unique: true },
-    name: { type: String, required: true },
-    ip_address: { type: String, required: true },
-    status: { type: String, required: true },
-    sessions: { type: Schema.Types.UUID, ref: 'Session'},
-    },
-    { timestamps: true })
-
-
-const commandTemplateSchema = new Schema({
-    id: { type: Schema.Types.UUID, required: true, unique: true },
-    name: { type: String, required: true },
-    description: { type: String, required: true },
-    category: { type: String, required: true },
-    created_by: { type: Schema.Types.UUID, ref: 'User', required: true },
-    },
-    { timestamps: true })
-
-const commandSchema = new Schema({
-    id: { type: Schema.Types.UUID, required: true, unique: true },
-    session_id: { type: Schema.Types.UUID, ref: 'Session', required: true },
-    sent_by: { type: Schema.Types.UUID, ref: 'User', required: true },
-    command_template_id: { type: Schema.Types.UUID, ref: 'CommandTemplate', required: true },
-    parameters: { type: String, required: true },
-    },
-    { timestamps: true })
-
-const commandResponseSchema = new Schema({
-    id: { type: Schema.Types.UUID, required: true, unique: true },
-    command_id: { type: Schema.Types.UUID, ref: 'Command', required: true },
-    device_id: { type: Schema.Types.UUID, ref: 'Device', required: true },
-    response_text: { type: String, required: true },
-    },
-    { timestamps: true })
-
-
-const auditLogSchema = new Schema({
-    id: { type: Schema.Types.UUID, required: true, unique: true },
-    session_id: { type: Schema.Types.UUID, ref: 'Session', required: true },
-    actor_type: { type: String, required: true }, // "User" created command or  "Device" joined session
-    actor_id: { type: Schema.Types.UUID, required: true },
-    action: { type: String, required: true },
-    meta: { type: Schema.Types.Mixed, required: true }, // For storing data in JSON format
-    created_at: { type: Date, default: Date.now },
-    },
-    { timestamps: true })
-
- //MODELS
-const User = mongoose.model('User', userSchema)
-const session = mongoose.model('User', sessionSchema)
-const Client = mongoose.model('Client',clientSchema)
-const SessionClient = mongoose.model('SessionClient',sessionClientSchema)
-const CommandTemplate = mongoose.model('CommandTemplate', commandTemplateSchema)
-const Command = mongoose.model('Command', commandSchema)
-const CommandResponse = mongoose.model('CommandResponse', commandResponseSchema)
-const AuditLog = mongoose.model('AuditLog', auditLogSchema)
-
 
 app.get('/', (request, response) => {
     response.send('login')
