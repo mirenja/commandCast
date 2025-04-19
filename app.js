@@ -25,6 +25,7 @@ const sessionSchema = new mongoose.Schema({
     id : { type: Schema.Types.UUID, required: true, unique: true },
     session_id: { type: String, required: true },
     started_by : { type: Schema.Types.UUID, ref: 'User', required: true },
+    clients: { type: Schema.Types.UUID, ref: 'Client'},
     password : String,
     role : String,
     },
@@ -35,15 +36,10 @@ const clientSchema = new Schema({
     name: { type: String, required: true },
     ip_address: { type: String, required: true },
     status: { type: String, required: true },
+    sessions: { type: Schema.Types.UUID, ref: 'Session'},
     },
     { timestamps: true })
 
-const sessionClientSchema = new Schema({
-    id: { type: Schema.Types.UUID, required: true, unique: true },
-    session_id: { type: Schema.Types.UUID, ref: 'Session', required: true },
-    device_id: { type: Schema.Types.UUID, ref: 'Client', required: true },
-    },
-    { timestamps: true })
 
 const commandTemplateSchema = new Schema({
     id: { type: Schema.Types.UUID, required: true, unique: true },
