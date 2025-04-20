@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { Schema } from 'mongoose'
 
 const commandSchema = new Schema({
     id: { type: Schema.Types.UUID, required: true, unique: true },

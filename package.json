@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "seed": "node database/seeders/seed.js"
   },
   "author": "",
   "license": "ISC",
@@ -17,7 +18,8 @@
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "mongoose": "^8.13.2",
-    "nodemon": "^3.1.9"
+    "nodemon": "^3.1.9",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@faker-js/faker": "^9.7.0",
