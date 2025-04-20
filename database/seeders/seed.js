@@ -13,8 +13,9 @@ import {Client} from '../../models/client.js'
 import {AuditLog} from '../../models/auditLog.js'
 
 import { faker } from '@faker-js/faker'
-import { buildUser } from '../factories/UserFactory.js'
+import { buildUser } from '../factories/userFactory.js'
 import { buildSession } from '../factories/sessionFactory.js'
+import { buidClient } from '../factories/clientFactory.js'
 
 
 
@@ -28,14 +29,48 @@ async function seed(){
         await User.insertMany(users)
         console.log('Users seeded successfully!')
 
+        const clients = await Client.insertMany(
+            Array.from({length: 5}, () =>  buidClient()),)
+            
+        console.log('Clients seeded successfully!')
+
         const sessions = await Promise.all(
             users.map((user) => {
-                const sessionData = buildSession(user.id)
+                const selectedClients = faker.helpers.arrayElements(clients, {min:2 , max:5})
+                const clientIds = selectedClients.map(client => client.id)
+
+                const sessionData = buildSession(user.id,clientIds)
+
                 console.log('Creating session for user:', user.name)
                 console.log('Creating session for sessionData:', sessionData)
-                return Session.create(sessionData)
+
+              
+                return Session.create(sessionData).then((session) => {
+                    selectedClients.forEach((client) => {
+                        client.sessions.push(session.id)
+                    })
+                    await Promise.all(clients.map(client => client.save()))
+                    return Promise.all(
+                        selectedClients.map((client) => {
+                            console.log('Updating client sessions...')
+                            console.log("client data..........")
+                            console.log(client)
+                            console.log("session data..........")
+                            console.log(session)
+                            client.sessions.push(session.id)
+                            return client.save()
+                        })
+                    ).then(() => {
+                        return session
+                    })
+                })
             })
         )
+        console.log("updating clients")
+        await Promise.all(
+            clients
+        )
+
         console.log('Sessions seeded successfully!')
 
     }catch (error){

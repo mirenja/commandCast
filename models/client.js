@@ -4,9 +4,11 @@ import { Schema } from 'mongoose'
 const clientSchema = new Schema({
     id: { type: Schema.Types.UUID, required: true, unique: true },
     name: { type: String, required: true },
+    mac_address : { type: String, required: true },
     ip_address: { type: String, required: true },
-    status: { type: String, required: true },
-    sessions: { type: Schema.Types.UUID, ref: 'Session'},
+    status:{ type: String, enum: ['online', 'offline', 'unknown'], default: 'unknown' },
+    //whats best practise 
+    sessions: [{ type: Schema.Types.UUID, ref: 'Session' }]
     },
     { timestamps: true })
 
