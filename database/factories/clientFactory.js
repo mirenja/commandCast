@@ -8,6 +8,6 @@ export const buidClient =(sessionId) => {
     mac_address: faker.internet.mac(),
     ip_address: faker.internet.ip(),
     status: faker.helpers.arrayElement(['online', 'offline', 'unknown']),
-    sessions:[sessionId]
+    sessions: sessionId ? [sessionId] : []
     })
 }

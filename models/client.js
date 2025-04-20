@@ -8,7 +8,7 @@ const clientSchema = new Schema({
     ip_address: { type: String, required: true },
     status:{ type: String, enum: ['online', 'offline', 'unknown'], default: 'unknown' },
     //whats best practise 
-    sessions: [{ type: Schema.Types.UUID, ref: 'Session' }]
+    sessions: { type: [Schema.Types.UUID], ref: 'Session' ,default: [],}
     },
     { timestamps: true })
 
