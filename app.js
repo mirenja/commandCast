@@ -11,14 +11,13 @@ import {Client} from './models/client.js'
 import {AuditLog} from './models/auditLog.js'
 
 
-
-
-
-
 const app =express()
+app.set('view engine', 'ejs')
+app.use(express.static('public'))
+
 
 app.get('/', (request, response) => {
-    response.send('login')
+    response.render('index')
 })
 
 app.post('/',(request,response) =>{
@@ -30,7 +29,7 @@ app.get('/admin', (request,response) => {
 })
 
 app.get('/sessions', (request,response) => {
-    response.send('session')
+    response.render('sessions/index')
 })
 
 
