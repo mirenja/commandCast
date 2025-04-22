@@ -4,31 +4,35 @@
     <div class="flex items-center justify-between text-sm mb-4">
       <span class="bg-green-600 text-white px-2 py-0.5 rounded-full">4 Online</span>
       <span class="bg-gray-600 text-white px-2 py-0.5 rounded-full">1 Offline</span>
+      <button onclick="window.location.href='/newclient'"
+      class="bg-white hover:bg-gray-200 text-gray-600 text-xs px-4 py-0.5 rounded-md border border-gray-600">+ Device</button>
     </div>
 
     <!-- Client Card -->
     <div class="space-y-3">
-      <div class="bg-gray-800 p-3 rounded-lg border border-green-600 hover:shadow-green-800">
-        <div class="absolute top-2 right-2 w-2.5 h-2.5 bg-green-400 rounded-full shadow-md"></div>
-        <h3 class="font-medium">Web Server 1</h3>
-        <p class="text-sm text-gray-300">Active</p>
-        <p class="text-xs text-gray-400">Last seen: just now</p>
-        <p class="text-xs text-gray-400">192.168.1.101</p>
-      </div>
+      <% clients.forEach(client => { %>
+        <% if (client.status === 'online') { %>
+          <div class="client-card bg-gray-800 p-3 rounded-lg border border-gray-600 opacity-60" client_id="<%= client.id%>" client_ip_address="<%=client.ip_address%>">
+            <div class="absolute top-2 right-2 w-2.5 h-2.5 bg-green-400 rounded-full shadow-md"></div>
+            <h3 class="font-medium"><%= client.name %></h3>
+            <p class="text-sm text-gray-300"><%= client.status %></p>
+            <p class="text-xs text-gray-400">Last seen: <%= client.updatedAt%></p>
+            <p class="text-xs text-gray-400"><%= client.ip_address %></p>
+          </div>
 
-      <div class="bg-gray-800 p-3 rounded-lg border border-green-600">
-        <h3 class="font-medium">Database Server</h3>
-        <p class="text-sm text-gray-300">Active</p>
-        <p class="text-xs text-gray-400">Last seen: just now</p>
-        <p class="text-xs text-gray-400">192.168.1.102</p>
-      </div>
-
-      <div class="bg-gray-800 p-3 rounded-lg border border-gray-600 opacity-60">
-        <h3 class="font-medium">Load Balancer</h3>
-        <p class="text-sm text-gray-300">Inactive</p>
-        <p class="text-xs text-gray-400">Last seen: 1h ago</p>
-        <p class="text-xs text-gray-400">192.168.1.103</p>
-      </div>
-
+        <% } else { %>
+          <div class="client-card bg-gray-800 p-3 rounded-lg border border-gray-600 opacity-60" client-id="<%= client.id %>" client_ip_address="<%=client.ip_address%>">
+            <h3 class="font-medium"><%= client.name %></h3>
+            <p class="text-sm text-gray-300"><%= client.status %></p>
+            <p class="text-xs text-gray-400">Last seen: <%= client.updatedAt%></p>
+            <p class="text-xs text-gray-400"><%= client.ip_address %></p>
+          </div>
+        <% } %>
+      <% }) %>
     </div>
     </aside>
+    <script src="/js/main.js"></script>
+
+
+
+  

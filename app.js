@@ -9,24 +9,28 @@ import {CommandResponse} from './models/commandResponse.js'
 import {Command} from './models/command.js'
 import {Client} from './models/client.js'
 import {AuditLog} from './models/auditLog.js'
+import { v4 as uuidv4 } from 'uuid'
+import { connectAndExecute } from './services/sshService.js'
 
 
 const app =express()
 app.set('view engine', 'ejs')
 app.use(express.static('public'))
+// to read the form requests body
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 
-app.get('/', (request, response) => {
-    response.render('index')
+app.get('/', async (request, response) => {
+    const clients = await Client.find({}).sort({ updatedAt: -1 }).exec()
+    const message = request.query.message
+    //console.log(clients)
+    response.render('index',{message,clients})
 })
 
 app.post('/',(request,response) =>{
     response.send('login')
 } )
-
-app.get('/admin', (request,response) => {
-    response.send('session')
-})
 
 app.get('/sessions', (request,response) => {
     response.render('sessions/index')
@@ -35,6 +39,47 @@ app.get('/sessions', (request,response) => {
 app.get('/show', (request,response) => {
     response.render('sessions/show')
 })
+
+
+app.get('/newclient', (request,response) => {
+    response.render('clients/show')
+})
+
+app.post('/newclient', async(request,response) => {
+    try{ 
+        console.log('BODY:', request.body)
+        const newClient = new Client({
+            id: uuidv4(),
+            name:request.body.name,
+            mac_address:request.body.mac_address,
+            ip_address:request.body.ip_address
+        })
+
+        await newClient.save()
+        response.redirect('/?message=Device+added+successfully')
+    }catch(error){
+        console.error(error)
+        response.redirect('/?message='+error)
+    }
+})
+
+app.post('/connect', async (request,response) => {
+    const ip_address = request.body.ip_address//when we put auntentication is should use the logged in user
+    console.log('Received request to connect to:', {ip_address })
+    try {
+      const result = await connectAndExecute({
+        host: ip_address,
+        // username, set default for dev
+        privateKeyPath: PRIVATE_KEY_PATH,
+        command: 'echo Connected'
+        
+      })
+      console.log(result)
+      response.send({ success: true, message: result });
+    } catch (error) {
+      response.send({ error })
+    }
+  })
 
 
 
