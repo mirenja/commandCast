@@ -32,6 +32,9 @@ app.get('/sessions', (request,response) => {
     response.render('sessions/index')
 })
 
+app.get('/show', (request,response) => {
+    response.render('sessions/show')
+})
 
 
 
