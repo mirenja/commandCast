@@ -1,5 +1,5 @@
 import express from 'express'
-import { PORT } from './config/app.js'
+import { PORT,SSH_PASSWORD} from './config/app.js'
 import './config/database.js'
 
 import {User} from './models/user.js'
@@ -65,18 +65,24 @@ app.post('/newclient', async(request,response) => {
 
 app.post('/connect', async (request,response) => {
     const ip_address = request.body.ip_address//when we put auntentication is should use the logged in user
+    const id = request.body.id
     console.log('Received request to connect to:', {ip_address })
     try {
       const result = await connectAndExecute({
         host: ip_address,
         // username, set default for dev
-        privateKeyPath: PRIVATE_KEY_PATH,
+        password:SSH_PASSWORD,
         command: 'echo Connected'
         
       })
       console.log(result)
+      console.log("Remote server connected succesfully")
+      await Client.updateOne({ id }, { status: 'online' })
+      console.log("db status updated to online")
       response.send({ success: true, message: result });
     } catch (error) {
+        console.log("server ddnt connect -------------")
+        console.log(error)
       response.send({ error })
     }
   })

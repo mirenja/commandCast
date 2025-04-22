@@ -1,8 +1,8 @@
 import { Client } from 'ssh2';
 import fs from 'fs'
-import {PRIVATE_KEY_PATH} from '../config/app.js'
 
-export function connectAndExecute({ host, username, privateKeyPath, command }) {
+
+export function connectAndExecute({ host,SSH_PASS, command }) {
     return new Promise((resolve, reject) => {
       const conn = new Client()
       let output = ''
@@ -25,10 +25,11 @@ export function connectAndExecute({ host, username, privateKeyPath, command }) {
       }).on('error', (err) => {
         reject(new Error('SSH connection error: ' + err.message))
       }).connect({
-        ip_address,
+        host,
         port: 22,
-        jill,
-        privateKey: fs.readFileSync(PRIVATE_KEY_PATH)
+        username:"jill",
+        password:'Peach1!'
+
       })
     })
   }
