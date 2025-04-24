@@ -2,7 +2,7 @@ import express from 'express'
 import { PORT,SSH_PASSWORD,username} from './config/app.js'
 import './config/database.js'
 import jwt from 'jsonwebtoken'
-import {generateAccessToken} from './services/acessToken.js'
+import {generateAccessToken,validateUser} from './services/acessToken.js'
 
 
 import {User} from './models/user.js'
@@ -33,19 +33,19 @@ app.post('/login', async(request,response) => {
   try{ 
       //console.log('BODY:', request.body)
       const { email, password } = request.body
-      const user = await User.findOne({
-        email:email
-      }).exec()
 
-      if (!user) { return response.redirect('/?message=User+not+found')}
+      const validatedUser = validateUser(email,password)
 
-      if (user.password !== password) {
-        return response.redirect('/?message=Incorrect+password')
-      }
-      const token = generateAccessToken(user.id)
-      response.json(token)
-  
+      
+      const token = generateAccessToken(validatedUser.id)
+      response.cookie('token',token,{
+        httpOnly: true,
+        secure: true,
+        sameSite: 'Strict',
+        maxAge: 3600000 
+      })
       response.redirect('/dashboard')
+      
 
   }catch(error){
       console.error(error)
