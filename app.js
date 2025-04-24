@@ -34,22 +34,41 @@ app.post('/login', async(request,response) => {
       //console.log('BODY:', request.body)
       const { email, password } = request.body
 
-      const validatedUser = validateUser(email,password)
+      console.log('user email:',email)
+
+      const validatedUser = await validateUser(email,password)
+      console.log("validated user is:",validatedUser)
 
       
-      const token = generateAccessToken(validatedUser.id)
+      const token = await generateAccessToken({ userId: validatedUser._id })
       response.cookie('token',token,{
         httpOnly: true,
         secure: true,
         sameSite: 'Strict',
         maxAge: 3600000 
       })
+      console.log("the token is",token)
       response.redirect('/dashboard')
+
+      // verify on middleware
+      // function authenticateToken(req, res, next) {
+      //   const authHeader = req.headers['authorization']
+      //   const token = authHeader && authHeader.split(' ')[1]
+      
+      //   if (!token) return res.sendStatus(401)
+      
+      //   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+      //     if (err) return res.sendStatus(403)
+      
+      //     req.user = user
+      //     next()
+      //   })
+      // }
       
 
   }catch(error){
       console.error(error)
-      response.redirect('/dashboard?message='+error)
+      response.redirect('/?message='+error)
   }
 })
 

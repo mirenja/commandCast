@@ -2,6 +2,7 @@
 import { generateAccessToken, validateUser } from '../services/acessToken'
 import { User } from '../models/user'
 import mockingoose  from 'mockingoose'
+import jwt from 'jsonwebtoken'
 
 
 
@@ -55,3 +56,38 @@ describe('validateUser', () => {
     await expect(validateUser(email, password)).rejects.toThrow('password does not match')
   })
 })
+
+
+// jest.mocked(jwt.verify).mockImplementation(
+//   jest.fn((_token, _secretOrPublicKey, _options, callback) => {
+//     return callback(null, { id: 0 });
+//   })
+// );
+
+// foo();
+// expect(promiseFunction).toHaveBeenCalledWith({ id: 0 })
+
+
+// jest.mock('jsonwebtoken')
+
+// describe('generateAccessToken', () => {
+//   it('should return a signed token', () => {
+//     const fakeToken = 'mocked.jwt.token';
+//     const user_id = '12345';
+
+//     // 👇 mock jwt.sign to return a fake token
+//     jwt.sign.mockReturnValue(fakeToken);
+
+//     const result = generateAccessToken({ user_id });
+
+//     // 👇 assert that it returns the mocked token
+//     expect(result).toBe(fakeToken);
+
+//     // 👇 optionally, assert it was called with correct args
+//     expect(jwt.sign).toHaveBeenCalledWith(
+//       { user_id },
+//       expect.any(String),
+//       { expiresIn: '1800s' }
+//     );
+//   });
+// });
