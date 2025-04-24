@@ -1,6 +1,7 @@
 name: Express APP  CI
 
-on: [push]
+on:
+    pull_request:
 
 jobs:
   build:
