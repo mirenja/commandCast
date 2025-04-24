@@ -28,4 +28,6 @@ jobs:
       - name: Create Pull Request
         run: gh pr create --title "Auto PR from ${{ github.ref_name }}" --body "Auto-created PR" --base main --head ${{ github.ref_name }}
         env:
-         GH_TOKEN: ${{ secrets.PAT}}
+            GH_TOKEN: ${{ secrets.WORKFLOWS }}
+
+        
