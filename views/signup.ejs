@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<%- include('includes/head')%>
+  <body>
+    <%- include('includes/header')%>
+    <% if (typeof message !== 'undefined') { %>
+
+        <script>
+          window.alert("<%= message %>")
+        </script>
+    <% } %>
+
+    <div class="flex items-center justify-center h-screen text-white bg-gray-900 font-sans">
+        <main class="bg-gray-900 p-8 rounded-lg shadow-lg space-y-4">
+          <form action="/signup" method="post" class="flex flex-col space-y-4 w-96">
+            <input type="text" name="name" placeholder="Name" required class="px-4 py-2 rounded border border-gray-600 placeholder-gray-600 bg-gray-800 text-white w-full" />
+            <input type="text" name="email" placeholder="email" required class="px-4 py-2 rounded border border-gray-600 placeholder-gray-600 bg-gray-800 text-white w-full" />
+            <input type="text" name="password" placeholder="Password" required class="px-4 py-2 rounded border border-gray-600 placeholder-gray-600 bg-gray-800 text-white w-full" />
+            <input type="text" name="confirm_password" placeholder=" Confirm Password" required class="px-4 py-2 rounded border border-gray-600 placeholder-gray-600 bg-gray-800 text-white w-full" />
+            <button class="text-sm text-gray-800 bg-white hover:bg-gray-200 px-4 py-2 rounded border border-gray-600 w-full">
+              Signup
+            </button>
+          </form>
+          <p class="text-sm text-gray-400">Have an account?<span><a href="/" class="text-blue-400 hover:text-blue-500 underline ml-1">Login instead</a></span></p>
+        </main>
+      </div>
+  </body>
+</html>

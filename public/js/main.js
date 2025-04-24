@@ -5,15 +5,20 @@ document.addEventListener('DOMContentLoaded', function (){
     const offlineClientDivs = document.querySelectorAll(".client-card")
     offlineClientDivs.forEach((div) => {
         div.addEventListener('click', async function() {
-            const clientId = div.getAttribute('client-id')
+            const clientId = div.getAttribute('client_id')
             const ip_address = div.getAttribute('client_ip_address')
+            const statusElement = div.querySelector('.client_status')
+            const status = statusElement?.textContent.trim()
+
+            const endpoint = status === 'online' ? '/disconnect' : '/connect'
+
             const bodyData = JSON.stringify({
-                id: clientId,
+                _id: clientId,
                 ip_address
             })
             console.log("Sending this body to /connect:", bodyData)
             try {
-                const response = await fetch('/connect', {
+                const response = await fetch(endpoint , {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -23,6 +28,10 @@ document.addEventListener('DOMContentLoaded', function (){
             
                 const result = await response.json()
                 console.log(result)
+                if (result.success) {
+                     statusElement.textContent = endpoint === '/disconnect' ? 'offline' : 'online'
+                     //window.location.reload()
+                  }
     
             } catch (error) {
                 console.error('Error connecting to client:', error)
