@@ -1,8 +1,13 @@
 import express from 'express'
+
+import cookieParser from 'cookie-parser'
 import { PORT,SSH_PASSWORD,username} from './config/app.js'
 import './config/database.js'
 import jwt from 'jsonwebtoken'
 import {generateAccessToken,validateUser} from './services/acessToken.js'
+
+
+import { logger } from './middlewares/logger.js'
 
 
 import {User} from './models/user.js'
@@ -14,14 +19,25 @@ import {Client} from './models/client.js'
 import {AuditLog} from './models/auditLog.js'
 import { v4 as uuidv4 } from 'uuid'
 import { connect,sendCommand } from './services/sshService.js'
+import { setCurrentUser } from './middlewares/setCurrentUser.js'
+import { isLoggedIn } from './middlewares/isLoggedIn.js'
 
 
 const app =express()
+
 app.set('view engine', 'ejs')
 app.use(express.static('public'))
+app.use(cookieParser())
+
 // to read the form requests body
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+
+////middleware
+app.use(cookieParser())
+app.use(setCurrentUser)
+app.use(logger)
+
 
 export const connections = new Map()
 
@@ -105,13 +121,15 @@ app.post('/signup', async(request,response) => {
 
 
 
-app.get('/dashboard', async (request, response) => {
+app.get('/dashboard',isLoggedIn, async (request, response) => {
     const clients = await Client.find({}).sort({ updatedAt: -1 }).exec()
     const onlineCount = clients.filter(client => client.status === 'online').length
     const offlineCount = clients.filter(client => client.status === 'offline').length
-    const message = request.query.message
+    
+    const loggedInUser = request.user
+    console.log("logged in user in dashoute",loggedInUser)
     //console.log(clients)
-    response.render('dashboard',{message,clients,onlineCount,offlineCount})
+    response.render('dashboard',{loggedInUser,clients,onlineCount,offlineCount})
 })
 
 
