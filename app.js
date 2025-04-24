@@ -2,7 +2,7 @@ import express from 'express'
 import { PORT,SSH_PASSWORD,username} from './config/app.js'
 import './config/database.js'
 import jwt from 'jsonwebtoken'
-import {generateAccessToken} from './services/acessToken.js'
+import {generateAccessToken,validateUser} from './services/acessToken.js'
 
 
 import {User} from './models/user.js'

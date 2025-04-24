@@ -9,6 +9,7 @@ export function  generateAccessToken({user_id}){
 
 export async  function  validateUser(email,password){
     const user = await User.findOne({email:email}).exec()
+    console.log('validate use rfunction returns:',user)
 
     if (!user){
         throw new Error('User not found')
