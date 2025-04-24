@@ -12,7 +12,7 @@ describe("Test the root path", () => {
 
 
   describe("Test the sessions path", () => {
-    test("It should response the GET method", async () => {
+    test("It should return the GET method", async () => {
       const response = await request(app).get("/sessions")
       expect(response.statusCode).toBe(200)
     })

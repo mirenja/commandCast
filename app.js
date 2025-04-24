@@ -98,9 +98,15 @@ app.get('/dashboard', async (request, response) => {
 
 
 app.get('/sessions', async (request,response) => {
+  try{
     const clients = await Client.find({}).sort({ updatedAt: -1 }).exec()
-    
-    response.render('sessions/index',{clients})
+    const onlineCount = clients.filter(client => client.status === 'online').length
+    const offlineCount = clients.filter(client => client.status === 'offline').length
+    // console.log('Clients fetched:', clients)
+    response.render('sessions/index',{clients,onlineCount,offlineCount})
+  }catch (error){
+    console.error('Error fetching clients:', error)
+  }
 })
 
 app.get('/show', (request,response) => {
