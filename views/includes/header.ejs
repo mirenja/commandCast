@@ -12,9 +12,11 @@
           <span class="text-sm text-gray-400"> Not logged in</span>
         <% } %>
       </span></span>
-      <button class="text-sm text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
-        Logout
-      </button>
+      <form action="/logout" method="POST">
+        <button type="submit" class="text-sm text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
+          Logout
+        </button>
+      </form>
     </div>
 
   </header>

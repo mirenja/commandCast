@@ -53,10 +53,10 @@ app.post('/login', async(request,response) => {
       //console.log('BODY:', request.body)
       const { email, password } = request.body
 
-      console.log('user email:',email)
+      // console.log('user email:',email)
 
       const validatedUser = await validateUser(email,password)
-      console.log("validated user is:",validatedUser)
+      // console.log("validated user is:",validatedUser)
 
       
       const token = await generateAccessToken({ userId: validatedUser._id })
@@ -65,7 +65,7 @@ app.post('/login', async(request,response) => {
         session_id:crypto.randomBytes(8).toString('hex'),
         started_by: validatedUser.id
       })
-
+      // console.log("session id for crypto",session.session_id)
       await session.save()
 
 
@@ -118,14 +118,20 @@ app.post('/login', async(request,response) => {
       
 
   }catch(error){
-      console.error(error)
+      // console.error(error)
       response.redirect('/?message='+error)
   }
 })
 
 app.post('/logout', async(request,response) => {
-  
-  })
+  try{
+    response.clearCookie('token')
+    response.clearCookie('sessionCookie')
+
+    response.redirect('/')
+  }catch(error){
+    response.redirect('/?message='+error)
+  }})
 
 app.get('/signup', async (request, response) => {
   response.render('signup')
