@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken'
+
 import {User} from '../models/user.js'
 
 export async function getUserFromToken(token) {

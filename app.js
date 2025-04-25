@@ -5,6 +5,8 @@ import { PORT,SSH_PASSWORD,username} from './config/app.js'
 import './config/database.js'
 import jwt from 'jsonwebtoken'
 import {generateAccessToken,validateUser} from './services/acessToken.js'
+import { authenticateToken} from './middlewares/authenticateToken.js'
+import crypto from 'crypto'
 
 
 import { logger } from './middlewares/logger.js'
@@ -20,7 +22,8 @@ import {AuditLog} from './models/auditLog.js'
 import { v4 as uuidv4 } from 'uuid'
 import { connect,sendCommand } from './services/sshService.js'
 import { setCurrentUser } from './middlewares/setCurrentUser.js'
-import { isLoggedIn } from './middlewares/isLoggedIn.js'
+import { getBerlinTime } from './services/berlinTime.js'
+
 
 
 const app =express()
@@ -57,12 +60,44 @@ app.post('/login', async(request,response) => {
 
       
       const token = await generateAccessToken({ userId: validatedUser._id })
+      const session = new Session({
+        id : uuidv4(),
+        session_id:crypto.randomBytes(8).toString('hex'),
+        started_by: validatedUser.id
+      })
+
+      await session.save()
+
+
       response.cookie('token',token,{
         httpOnly: true,
         secure: true,
         sameSite: 'Strict',
         maxAge: 3600000 
+        
       })
+      const createdAt = session.createdAt
+      const date = getBerlinTime(createdAt)
+      const time = getBerlinTime(createdAt)
+
+      // console.log("the date is now",date)
+      // console.log("the date is now",time)
+
+      const sessionCookie = {
+        id:session.id,
+        session_id:session.session_id,
+        date:date.date,
+        time:time.time
+
+      }
+
+      response.cookie('sessionCookie', sessionCookie, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'Strict',
+        maxAge: 3600000,
+      })
+
       console.log("the token is",token)
       response.redirect('/dashboard')
 
@@ -87,6 +122,10 @@ app.post('/login', async(request,response) => {
       response.redirect('/?message='+error)
   }
 })
+
+app.post('/logout', async(request,response) => {
+  
+  })
 
 app.get('/signup', async (request, response) => {
   response.render('signup')
@@ -121,15 +160,18 @@ app.post('/signup', async(request,response) => {
 
 
 
-app.get('/dashboard',isLoggedIn, async (request, response) => {
+app.get('/dashboard',authenticateToken, async (request, response) => {
     const clients = await Client.find({}).sort({ updatedAt: -1 }).exec()
     const onlineCount = clients.filter(client => client.status === 'online').length
     const offlineCount = clients.filter(client => client.status === 'offline').length
     
-    const loggedInUser = request.user
+    const loggedInUser = request.loggedInUser
+    const currentSessionId =request.cookies.sessionCookie
+    // =request.session._id
+
     console.log("logged in user in dashoute",loggedInUser)
     //console.log(clients)
-    response.render('dashboard',{loggedInUser,clients,onlineCount,offlineCount})
+    response.render('dashboard',{loggedInUser,clients,onlineCount,offlineCount,currentSessionId})
 })
 
 
