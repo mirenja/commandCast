@@ -14,7 +14,7 @@ import { logger } from './middlewares/logger.js'
 
 import {User} from './models/user.js'
 import {Session} from './models/session.js'
-import {CommandTemplate} from './models/commandtemplate.js'
+
 import {CommandResponse} from './models/commandResponse.js'
 import {Command} from './models/command.js'
 import {Client} from './models/client.js'
@@ -61,7 +61,6 @@ app.post('/login', async(request,response) => {
       
       const token = await generateAccessToken({ userId: validatedUser._id })
       const session = new Session({
-        id : uuidv4(),
         session_id:crypto.randomBytes(8).toString('hex'),
         started_by: validatedUser.id
       })

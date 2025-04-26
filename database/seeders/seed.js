@@ -6,7 +6,6 @@ import '../../config/database.js'
 
 import {User} from '../../models/user.js'
 import {Session} from '../../models/session.js'
-import {CommandTemplate} from '../../models/commandtemplate.js'
 import {CommandResponse} from '../../models/commandResponse.js'
 import {Command} from '../../models/command.js'
 import {Client} from '../../models/client.js'
@@ -51,15 +50,24 @@ async function seed(){
 
                 const session = await Session.create(sessionData)
                 sessions.push(session)
+                console.log("session data added!!!!!!")
 
                 for (const client of selectedClients){
-                    client.sessions.push(session.id)
+                    client.sessions.push(session._id)
                     await client.save()
+                    console.log("client save!!!")
                 }
 
-                const commands = Array.from({length:10}, () => 
-                    buildCommand(user.id,session.id)
-                )
+                console.log("end of client creation loop")
+
+                const commands = Array.from({length:10}, () => {
+                    const randomClient = faker.helpers.arrayElement(selectedClients)
+                    // console.log("radom client selected:",randomClient)
+                    return buildCommand(user.id,session._id,randomClient.id)
+                    console.log("command succesfully built.")
+                })
+                console.log("commands generated,", commands)
+
                 const insertedCommands = await Command.insertMany(commands)
                 console.log("commands inserted generating responses.......")
 
@@ -72,7 +80,7 @@ async function seed(){
 
                 for (const command of insertedCommands){
                     const log1 = buildAuditLog(
-                        session.id,
+                        session._id,
                         'User',
                         user.id,
                         'command_sent',
@@ -82,13 +90,16 @@ async function seed(){
                             sent_at: command.createdAt
                         }
                     )
+                    
                     ///when we get the response
-                    const response = await CommandResponse.findOne({ command_id: command.id }).lean()
+                     const response = await CommandResponse.findOne({ command_id: command.id }).lean()
+                     const clientId = (await Command.findOne({ id: response.command_id }).select('client_id').lean())?.client_id
+                    console.log("response coming in ..",response)
                     const log2 = response
                       ? buildAuditLog(
-                          session.id,
+                          session._id,
                           'Client',
-                          response.client_id,
+                          clientId ,
                           'response_received',
                           {
                             response_id: response.id,
@@ -97,19 +108,21 @@ async function seed(){
                             received_at: response.createdAt
                           }
                         )
-                      : null                
+                      : null     
+                    //   console.log("seco log created",log2)           
 
                       //normaly would be populated by the middleware , should test it after adding it
                     const extraLogs = [
                       buildAuditLog(
-                          session.id,
+                          session._id,
                           'Client',
-                          response.client_id,
+                          clientId ,
                           'device_joined',
                           {joined_at:session.createdAt},
                       ),
-                      buildAuditLog(session.id,'User',user.id,'SESSION_CLOSED')
+                      buildAuditLog(session._id,'User',user.id,'SESSION_CLOSED')
                     ]
+                    
 
                     const logs = [log1, log2, ...extraLogs]
                     await AuditLog.insertMany(logs)

@@ -7,15 +7,16 @@ const commandMap = {
   }
 
 
-export const buildCommand =(userId,session_id) => {
+export const buildCommand =(userId,session_id,client_id) => {
     const command_category = faker.helpers.arrayElement(Object.keys(commandMap))
     const command_text = faker.helpers.arrayElement(commandMap[command_category])
 
     return({
     id: faker.string.uuid(),
+    session_id: session_id,
+    sent_by:userId,
+    client_id: client_id,
     command_text,
     command_category,
-    session_id: session_id,
-    sent_by:userId
     })
 }
