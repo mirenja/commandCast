@@ -5,7 +5,7 @@ import { Schema } from 'mongoose'
 const sessionSchema = new mongoose.Schema({
     session_id: { type: String, required: true },
     started_by : { type: Schema.Types.UUID, ref: 'User', required: true },
-    clients: { type: Schema.Types.UUID, ref: 'Client',default: null},
+    clients: [{ type: Schema.Types.ObjectId, ref: 'Client',default: []}],
    
     },
     { timestamps: true })

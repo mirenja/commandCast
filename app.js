@@ -23,6 +23,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { connect,sendCommand } from './services/sshService.js'
 import { setCurrentUser } from './middlewares/setCurrentUser.js'
 import { getBerlinTime } from './services/berlinTime.js'
+import { addClientToSession,removeClientToSession } from './services/clientToSession.js'
 
 
 
@@ -236,6 +237,8 @@ app.post('/newclient', async(request,response) => {
 app.post('/connect', async (request,response) => {
     const ip_address = request.body.ip_address//when we put auntentication is should use the logged in user
     const _id = request.body._id
+    const sessionCookie = request.cookies.sessionCookie
+    console.log("Session cookie in connect",sessionCookie)
     console.log('Received request to connect to:', {ip_address })
     console.log('Received request to connect to ID:', {_id })
     try {
@@ -251,13 +254,13 @@ app.post('/connect', async (request,response) => {
       // console.log(conn)
       
       connections.set(_id,conn)
-      const updatedClient = await Client.findOneAndUpdate({ _id }, { status: 'online' },{ new: true })
-      // console.log("db status updated to online")
-      if (!updatedClient) {
-        console.log(`No client found with _id: ${_id}`)
-      } else {
-        console.log(`Client ${updatedClient._id} updated to online`)
-      }
+      await Client.findOneAndUpdate({ _id }, { status: 'online' },{ new: true })
+      await addClientToSession(sessionCookie.id, _id)
+      // if (!updatedClient) {
+      //   console.log(`No client found with _id: ${_id} ${updatedSession}`)
+      // } else {
+      //   console.log(`Client ${_id} ${updatedSession} updated to online`)
+      // }
       response.send({ success: true, message: 'Connected successfully' })
 
     } catch (error) {
@@ -268,7 +271,8 @@ app.post('/connect', async (request,response) => {
   })
 
   app.post('/disconnect',async (request, response) => {
-    const _id = request.body._id
+    const _id = request.body
+    const sessionCookie = request.cookies.sessionCookie
     console.log('Received request to DISconnect to ID:', {_id })
     console.log(_id)
     const conn = connections.get(_id);
@@ -276,7 +280,8 @@ app.post('/connect', async (request,response) => {
       conn.end()
       connections.delete(id)
     }
-    await Client.updateOne({ _id }, { status: 'offline' })
+    await Client.updateOne({ _id }, { status: 'offline' },{ new: true })
+    await removeClientToSession(sessionCookie.id, _id)
     console.log("db status updated to offline")
     response.send({ success: true, message: 'Disconnected' })
   })
