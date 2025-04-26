@@ -124,6 +124,19 @@ app.post('/login', async(request,response) => {
 
 app.post('/logout', async(request,response) => {
   try{
+    for (const [_id, conn] of connections.entries()){
+      try{
+        conn.end()
+        await Client.updateOne({ _id }, { status: 'offline' })
+      }
+      catch(error)
+      {
+        console.log("Error disconnecting",error)
+      }
+    }
+   
+
+    connections.clear()
     response.clearCookie('token')
     response.clearCookie('sessionCookie')
 
@@ -174,7 +187,7 @@ app.get('/dashboard',authenticateToken, async (request, response) => {
     const currentSessionId =request.cookies.sessionCookie
     // =request.session._id
 
-    console.log("logged in user in dashoute",loggedInUser)
+    // console.log("logged in user in dashoute",loggedInUser)
     //console.log(clients)
     response.render('dashboard',{loggedInUser,clients,onlineCount,offlineCount,currentSessionId})
 })
@@ -204,7 +217,7 @@ app.get('/newclient', (request,response) => {
 
 app.post('/newclient', async(request,response) => {
     try{ 
-        console.log('BODY:', request.body)
+        // console.log('BODY:', request.body)
         const newClient = new Client({
             id: uuidv4(),
             name:request.body.name,
@@ -213,9 +226,9 @@ app.post('/newclient', async(request,response) => {
         })
 
         await newClient.save()
-        response.redirect('/?message=Device+added+successfully')
+        response.redirect('/dashboard?message=Device+added+successfully')
     }catch(error){
-        console.error(error)
+        // console.error(error)
         response.redirect('/?message='+error)
     }
 })
@@ -224,6 +237,7 @@ app.post('/connect', async (request,response) => {
     const ip_address = request.body.ip_address//when we put auntentication is should use the logged in user
     const _id = request.body._id
     console.log('Received request to connect to:', {ip_address })
+    console.log('Received request to connect to ID:', {_id })
     try {
       const conn = await connect({
         host: ip_address,
@@ -234,11 +248,16 @@ app.post('/connect', async (request,response) => {
       
       //console.log(conn)
       console.log("Remote server connected succesfully")
-      console.log(conn)
+      // console.log(conn)
       
       connections.set(_id,conn)
-      await Client.updateOne({ _id }, { status: 'online' })
-      console.log("db status updated to online")
+      const updatedClient = await Client.findOneAndUpdate({ _id }, { status: 'online' },{ new: true })
+      // console.log("db status updated to online")
+      if (!updatedClient) {
+        console.log(`No client found with _id: ${_id}`)
+      } else {
+        console.log(`Client ${updatedClient._id} updated to online`)
+      }
       response.send({ success: true, message: 'Connected successfully' })
 
     } catch (error) {
@@ -250,6 +269,8 @@ app.post('/connect', async (request,response) => {
 
   app.post('/disconnect',async (request, response) => {
     const _id = request.body._id
+    console.log('Received request to DISconnect to ID:', {_id })
+    console.log(_id)
     const conn = connections.get(_id);
     if (conn) {
       conn.end()
