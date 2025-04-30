@@ -9,11 +9,12 @@ import { authenticateToken} from './middlewares/authenticateToken.js'
 import { generatedSalt,hashPassword } from './services/passwordHashing.js'
 import crypto from 'crypto'
 import {fileAndSystemCommands} from './services/commandwhitelist.js'
-import validator from 'validator'
+
 
 
 
 import { logger } from './middlewares/logger.js'
+import { signupValidationRules,validate } from './middlewares/signUpValidate.js'
 
 
 import {User} from './models/user.js'
@@ -175,43 +176,25 @@ app.get('/signup', async (request, response) => {
 })
 
 
-app.post('/signup',
-  body('name').isString().isLength({ max: 50 }).escape().trim(),
-  body('email').isString().isLength({ max: 50 }).isEmail().escape().trim(),
-  body('password').isString().isLength({ min:10, max: 20 }).withMessage('Password must be atleast 10 characters long').matches(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{10,20}$/)
-  .withMessage('Password must include letters, numbers, and a special character').escape().trim(),
-  body('confirm_password').isString().isLength({  min:10, max: 20  }).custom((value, { req }) => {
-    if (value !== req.body.password) { 
-      throw new Error('Passwords do not match')}
-      return true}),
-  async(request,response) => {
+app.post('/signup',signupValidationRules, validate,async(request,response) => {
   try{ 
-
-    validationResult(request).throw()
-    // if (!errors.isEmpty()) {
-    //   // const errorMessage = errors.array()[0].msg
-    //   console.log("first error")
-    //   console.log(errorMessage)
-    //   return response.redirect('/signup?message=' +errorMessage)
-    //   }
 
     const salt = await generatedSalt()
     const hashedPassword = await hashPassword(request.body.password, salt)
+
     const newUser = new User({
         id: uuidv4(),
         name:request.body.name,
         email:request.body.email,
         password:hashedPassword
     })
+
     await newUser.save()
+
     console.log("user added!!")
     response.redirect('/?message=User+added+successfully')
 
   }catch(error){
-    // console.error(error)
-    // console.log("the actual error)")
-    // console.log(error)
-    // console.log("!!!!!!!!!!")
     if (Array.isArray(error.errors)) {
       console.log("All validation errors:")
       console.log(error.errors)
