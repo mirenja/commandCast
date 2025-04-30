@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker'
+import { v4 as uuidv4 } from 'uuid'
 
 const actions = [
     'COMMAND_SENT',//user
@@ -12,7 +13,7 @@ const actions = [
 
 export const buildAuditLog = (sessionId, actorType, actorId, action, meta = {}) => {
     return {
-      id: faker.string.uuid(),
+      id: uuidv4(),
       session_id: sessionId,
       actor_type: actorType, // "User" or "Device"
       actor_id: actorId,

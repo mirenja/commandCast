@@ -1,17 +1,19 @@
 
   
   async function sendCommand() {
-    const raw = document.getElementById('clientData').textContent
-    const clients = JSON.parse(raw)
+    console.log("command.js has been called!!!")
+    // const raw = document.getElementById('clientData').textContent
+    
     //const onlineClients = clients.filter(client => client.status === 'online') ///actual app
     //dev server
 
-    const onlineClients = clients.filter(client => client.name === 'testpc')
 
-    console.log("online clients only-------")
-    console.log(onlineClients)
+
+
+   
 
     const command = document.getElementById('commandInput').value
+    const category = document.getElementById('categorySelect').value
   
     if (!command) {
       alert("Please enter a command!")
@@ -20,11 +22,7 @@
 
     try {
         
-        for (const client of onlineClients) {
-            console.log('------------------------------client receiving command')
-            console.log(client)
-            const clientId = client._id.toString()
-            const bodyData = JSON.stringify({ _id: clientId, command })
+            const bodyData = JSON.stringify({ command ,category})
             //console.log(bodyData)
 
           const res = await fetch('/sendCommand', {
@@ -36,7 +34,7 @@
           })
     
           const result = await res.json()
-          console.log('command sent------')
+          console.log('command sent------') 
 
          if (result.success) {
             document.getElementById('commandresult').textContent = result.message
@@ -47,9 +45,15 @@
          }
 
 
-        }
+        
       } catch (error) {
         console.error("Error sending command:", error)
       }
 
   }
+
+
+async function clearResults() {
+  const resultsContainer = document.getElementById('commandresult')
+  resultsContainer.innerHTML = ''
+}

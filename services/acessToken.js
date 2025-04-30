@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
 import { TOKEN_SECRET } from '../config/app.js'
 import { User} from '../models/user.js'
+import { comparePassword } from './passwordHashing.js'
 
 
 export function  generateAccessToken(user_id){
@@ -18,10 +19,11 @@ export async  function  validateUser(email,password){
         // return response.redirect('/?message='+message)
     }
 
-    if (user.password !== password) {
-        throw new Error('password does not match')
-        // return response.redirect('/?message='+message)
+    const isMatch = await comparePassword(password, user.password)
+    if (!isMatch) {
+        throw new Error('Password does not match');
     }
+
     return user
 
 }
