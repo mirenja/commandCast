@@ -58,8 +58,8 @@ app.get('/', async (request, response) => {
 })
 
 app.post('/login',
-  body('email').isString().isLength({ max: 50 }).isEmail().trim().escape(),
-  body('password').isString().isLength({ max: 20 }).trim().escape(),
+  body('email').isString().isLength({ max: 50 }).isEmail().withMessage("invalid Email").trim().escape(),
+  body('password').isString().isLength({ max: 20 }).withMessage("invalid password").trim().escape(),
    async(request,response) => {
   try{ 
       //console.log('BODY:', request.body)
@@ -114,6 +114,9 @@ app.post('/login',
 
       console.log("the token is",token)
       response.redirect('/dashboard')
+      console.log("THE RESPONSE HEADER!!!")
+      console.log("Status Code:", response.statusCode)
+      console.log(response.getHeaders())
 
       // verify on middleware
       // function authenticateToken(req, res, next) {
@@ -133,19 +136,19 @@ app.post('/login',
 
   }catch(error){
       // console.error(error)
-      if (Array.isArray(error.errors)) {
-        console.log("All validation errors:")
-        console.log(error.errors)
+      // if (Array.isArray(error.errors)) {
+      //   console.log("All validation errors:")
+      //   console.log(error.errors)
         const messages = error.errors.map(err => err.msg)
         let firstMessage = messages[0]
-        if (firstMessage == 'Invalid value'){
-          firstMessage = "invalid Email"
-        }
-        response.redirect('/?message=' + encodeURIComponent(firstMessage))
+        // if (error.errors.some(err => err.param === 'email')){
+        //   firstMessage = "invalid Email"
+        // }
+        response.redirect('/?message=' + encodeURIComponent(firstMessage)) 
       }
       
   }
-})
+)
 
 app.post('/logout', async(request,response) => {
   try{

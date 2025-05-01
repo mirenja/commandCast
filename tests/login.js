@@ -1,93 +1,73 @@
+import { jest } from '@jest/globals'
 
-// import { generateAccessToken, validateUser } from '../services/acessToken'
-// import { User } from '../models/user'
-// import mockingoose  from 'mockingoose'
-// import jwt from 'jsonwebtoken'
+jest.unstable_mockModule('bcrypt', () => ({
+  default: {
+    compare: jest.fn().mockResolvedValue(true),
+  }
+}))
 
+jest.unstable_mockModule('../services/acessToken.js', () => ({
+  generateAccessToken: jest.fn().mockResolvedValue('fake.jwt.token'),
+  validateUser: jest.fn().mockResolvedValue({ _id: '123abc', email: 'jane@example.com' }),
+}))
 
-
-
-
-// describe('validateUser', () => {
-//   it('should return user if email and password match', async () => {
-//     const email = 'jane@gmail.com'
-//     const password = 'password123'
-//     const user = {
-//       _id:'6805f9bd5ee438a73bb0e6bb',
-//       name: 'Jane Doe',
-//       email: 'jane@gmail.com',
-//       password: 'password123',
-//       role: 'user'
-//     }
-
-//     mockingoose(User).toReturn(user, 'findOne')
-
-//     const result = await validateUser(email, password)
-
-    
-//     expect(result.name).toEqual(user.name)
-//     expect(result.email).toEqual(user.email)
-//     expect(result.password).toEqual(user.password)
-//     expect(result.role).toEqual(user.role)
-//   })
-
-//   it('should throw an error if user is not found', async () => {
-//     const email = 'other@gmail.com'
-//     const password = 'password123'
-
-   
-//     mockingoose(User).toReturn(null, 'findOne')
-
-//     await expect(validateUser(email, password)).rejects.toThrow('User not found')
-//   })
-
-//   it('should throw an error if password does not match', async () => {
-//     const email = 'jane@gmail.com'
-//     const password = 'wrongpassword'
-
-//     const user = {
-//       _id: '12345',
-//       email: 'jane@gmail.com',
-//       password: 'password123'
-//     };
-
-//     mockingoose(User).toReturn(user, 'findOne')
-
-//     await expect(validateUser(email, password)).rejects.toThrow('password does not match')
-//   })
-// })
+const request = (await import('supertest')).default
+const app = (await import('../app.js')).default
+const { generateAccessToken, validateUser } = await import('../services/acessToken.js')
 
 
-// // jest.mocked(jwt.verify).mockImplementation(
-// //   jest.fn((_token, _secretOrPublicKey, _options, callback) => {
-// //     return callback(null, { id: 0 });
-// //   })
-// // );
-
-// // foo();
-// // expect(promiseFunction).toHaveBeenCalledWith({ id: 0 })
 
 
-// // jest.mock('jsonwebtoken')
+// const mockUser = { _id: '123abc', email: 'jane@example.com' }
+// validateUser.mockResolvedValue(mockUser)
+// generateAccessToken.mockResolvedValue('fake.jwt.token')
 
-// // describe('generateAccessToken', () => {
-// //   it('should return a signed token', () => {
-// //     const fakeToken = 'mocked.jwt.token';
-// //     const user_id = '12345';
+describe('POST /login', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
 
-// //     // 👇 mock jwt.sign to return a fake token
-// //     jwt.sign.mockReturnValue(fakeToken);
+  it('should fail when email is invalid', async () => {
+    const response = await request(app)
+      .post('/login')
+      .send({
+        email: 'invalidemail',
+        password: 'Valid123!'
+      })
 
-// //     const result = generateAccessToken({ user_id });
+    expect(response.statusCode).toBe(302)
+    expect(response.header['location']).toMatch("/?message=invalid%20Email")
+  })
 
-// //     // 👇 assert that it returns the mocked token
-// //     expect(result).toBe(fakeToken);
+  it('should fail when password is too long', async () => {
+    const longPassword = 'a'.repeat(100)
+    const response = await request(app)
+      .post('/login')
+      .send({
+        email: 'jane@example.com',
+        password: longPassword
+      })
 
-// //     // 👇 optionally, assert it was called with correct args
-// //     expect(jwt.sign).toHaveBeenCalledWith(
-// //       { user_id },
-// //       expect.any(String),
-// //       { expiresIn: '1800s' }
-// //     );
-// //   });
-// // });
+    expect(response.statusCode).toBe(302)
+    expect(response.header['location']).toMatch("/?message=invalid%20password")
+  })
+
+  it('should succeed with valid credentials and set cookies', async () => {
+    const response = await request(app)
+      .post('/login')
+      .send({
+        email: 'jane@example.com',
+        password: 'securePassword123'
+      })
+
+    expect(response.statusCode).toBe(302)
+    expect(response.header['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('token='),
+        expect.stringContaining('HttpOnly'),
+        expect.stringContaining('sessionCookie=')
+      ])
+    )
+    expect(response.header['location']).toBe('/dashboard')
+  })
+})
