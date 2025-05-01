@@ -4,8 +4,14 @@
     <div class="flex items-center justify-between text-sm mb-4">
       <span class="bg-green-600 text-shadow-white text-xs px-3 py-0.5 rounded-full"><%=onlineCount%> online</span>
       <span class="bg-gray-600 text-shadow-white text-xs px-3 py-0.5 rounded-full"><%=offlineCount%> Offline</span>
-      <button onclick="window.location.href='/newclient'"
-      class="bg-white hover:bg-gray-200 text-gray-600 text-xs px-4 py-0.5 rounded-md border border-gray-600">+ Device</button>
+      <% if (loggedInUser.isAdmin) { %>
+        <button onclick="window.location.href='/clients'"
+      class="bg-white hover:bg-gray-200 text-gray-600 text-xs px-4 py-0.5 rounded-md border border-gray-600"> Manage</button>
+        <% } else { %>
+          <button onclick="window.location.href=''"
+      hidden>+ Device</button>
+        <% } %>
+      
     </div>
 
     <!-- Client Card -->

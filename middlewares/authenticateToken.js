@@ -17,7 +17,8 @@ export function authenticateToken(request, response, next) {
         return response.redirect('/?error=forbidden')
         
     }
-    request.user = user
+    // request.user = user
+    
     next()
     })
 }
