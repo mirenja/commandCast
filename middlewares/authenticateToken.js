@@ -15,7 +15,7 @@ export function authenticateToken(request, response, next) {
         response.clearCookie('token')
         response.clearCookie('sessionCookie')
         return response.redirect('/?error=forbidden')
-        sendStatus(403)
+        
     }
     request.user = user
     next()

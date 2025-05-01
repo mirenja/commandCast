@@ -16,6 +16,7 @@ import {fileAndSystemCommands} from './services/commandwhitelist.js'
 
 
 
+
 import { logger } from './middlewares/logger.js'
 import { signupValidationRules,validate } from './middlewares/signUpValidate.js'
 
@@ -138,17 +139,14 @@ app.post('/login',
       
 
   }catch(error){
-      // console.error(error)
-      // if (Array.isArray(error.errors)) {
-      //   console.log("All validation errors:")
-      //   console.log(error.errors)
-        const messages = error.errors.map(err => err.msg)
-        let firstMessage = messages[0]
-        // if (error.errors.some(err => err.param === 'email')){
-        //   firstMessage = "invalid Email"
-        // }
-        response.redirect('/?message=' + encodeURIComponent(firstMessage)) 
-      }
+    if (Array.isArray(error.errors)) {
+      const messages = error.errors.map(err => err.msg);
+      let firstMessage = messages[0];
+      response.redirect('/?message=' + encodeURIComponent(firstMessage));
+    } else {
+      response.redirect('/?message=' + encodeURIComponent('An unexpected error occurred'));
+    }  
+}
       
   }
 )
@@ -291,7 +289,7 @@ app.get('/dashboard',authenticateToken, async (request, response) => {
 
 
 
-app.get('/sessions', async (request,response) => {
+app.get('/sessions',authenticateToken, async (request,response) => {
   try{
     const clients = await Client.find({}).sort({ updatedAt: -1 }).exec()
     const onlineCount = clients.filter(client => client.status === 'online').length
@@ -305,7 +303,7 @@ app.get('/sessions', async (request,response) => {
     console.error('Error fetching clients:', error)
   }
 })
-app.get('/sessions/:session_id', async (request,response) => {
+app.get('/sessions/:session_id',authenticateToken, async (request,response) => {
   try{
     const currentSessionId =request.cookies.sessionCookie
     const session_id = request.params.session_id
@@ -345,7 +343,7 @@ app.get('/sessions/:session_id', async (request,response) => {
   }
 })
 
-app.get('/exportsession/:session_id', async (request, response) => {
+app.get('/exportsession/:session_id',authenticateToken, async (request, response) => {
   const session_id = request.params.session_id
   console.log("SESSION EX",session_id)
   console.log(session_id)
@@ -406,7 +404,7 @@ app.get('/exportsession/:session_id', async (request, response) => {
 
 
 
-app.get('/newclient', (request,response) => {
+app.get('/newclient',authenticateToken, (request,response) => {
     response.render('clients/show')
 })
 
@@ -440,7 +438,7 @@ app.post('/newclient',
     }
 })
 
-app.post('/connect',
+app.post('/connect',authenticateToken,
   
   async (request,response) => {
     const ip_address = request.body.ip_address//when we put auntentication is should use the logged in user
@@ -498,7 +496,7 @@ app.post('/connect',
 
 
 
-  app.post('/sendCommand',
+  app.post('/sendCommand',authenticateToken,
     body('command').isString().trim().escape(),
     async (request,response) => {
     const { command ,category } = request.body
