@@ -1,4 +1,7 @@
+import "./instrument.mjs"
 import express from 'express'
+import * as Sentry from "@sentry/node"
+
 
 import cookieParser from 'cookie-parser'
 import { PORT,SSH_PASSWORD,username} from './config/app.js'
@@ -562,10 +565,13 @@ app.post('/connect',
       }
     }
     })
+    // app.get("/debug-sentry", function mainHandler(request, response) {
+    //   throw new Error("My first Sentry error!");
+    // })
 
 
 
-
+Sentry.setupExpressErrorHandler(app)
 
 
 
