@@ -21,7 +21,7 @@
           </div>
 
         <% } else { %>
-          <div class="client-card bg-gray-800 p-3 rounded-lg border border-gray-600 opacity-60" client-id="<%= client.id %>" client_ip_address="<%=client.ip_address%>">
+          <div class="client-card bg-gray-800 p-3 rounded-lg border border-gray-600 opacity-60" client_id="<%= client._id %>" client_ip_address="<%=client.ip_address%>">
             <h3 class="font-medium"><%= client.name %></h3>
             <p class="client_status text-sm text-gray-300"><%= client.status %></p>
             <p class="text-xs text-gray-400">Last seen: <%= client.updatedAt%></p>

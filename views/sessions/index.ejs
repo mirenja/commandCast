@@ -12,27 +12,26 @@
     <!-- Right Main Panel -->
     <main class="flex-1 flex flex-col p-6 space-y-4 bg-gray-900">
     <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 flex justify-between items-center">
-      <div class="flex items-center gap-6 text-sm text-gray-300">
-        <span>Session: <span class="text-green-400">session-1745266099713</span></span>
-        <span>21/04/2025</span>
-        <span>🕒 Started: 22:08:19 (0m)</span>
-      </div>
-      <button class="text-xs text-gray-600 bg-white hover:bg-gray-200 px-4 py-2 rounded border border-gray-600">
-        Export Log
-      </button>
+        <div class="flex items-center gap-18 text-sm text-gray-300">
+          <span class="ml-2 px-2 py-1">Session: <span class="text-green-400">session-<%= currentSessionId.session_id %></span></span>
+          <span class="ml-2 px-2 py-1"><%= currentSessionId.date %></span>
+          <span class="ml-2 px-2 py-1">|</span>
+          <span class="px-2 py-1 ml-5 mr-"> 🕒 <%= currentSessionId.time %></span>
+        </div> 
+        <a href="/exportsession/<%= currentSessionId.session_id %>">
+        <button class="text-xs text-gray-600 bg-white hover:bg-gray-200 px-4 py-2 rounded border border-gray-600">
+          Export Log
+        </button>
+        </a>
     </div>
     <div class="flex items-center gap-4">
-      <input type="text" placeholder="Connect to send commands..." class="w-full bg-gray-800 border border-gray-600 text-sm text-white px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
-      <button class="bg-green-600 hover:bg-green-700 text-white text-xs px-4 py-2 rounded-s-sm">
-        Send
-      </button>
     </div>
     <div class="flex items-center justify-between">
       <div class="flex gap-4">
         <button class="bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">Command Results</button>
         <button class="bg-gray-800 text-gray-400 px-4 py-2 rounded-lg text-sm">Session Logs</button>
       </div>
-      <button class="bg-white hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-md text-xs border border-gray-600">Clear Results</button>
+
     </div>
     <div class="mb-4 flex items-center gap-4">
       <input type="text" placeholder="Search sessions..." class="w-full bg-white text-gray-800 px-4 py-2 rounded-md text-sm" />
@@ -49,28 +48,34 @@
             <th class="px-6 py-3">Start Time</th>
             <th class="px-6 py-3">Duration</th>
             <th class="px-6 py-3">Commands</th>
-            <th class="px-6 py-3">Actions</th>
+            <th class="px-6 py-3"></th>
           </tr>
         </thead>
         <tbody>
-          <tr class ="text-white">
-            <td class="px-6 py-3 font-mono">session-1</td>
-            <td class="px-6 py-3">11/01/2025 15:44:54</td>
-            <td class="px-6 py-3">2418h 4m</td>
-            <td class="px-6 py-3">uptime, df -h, whoami</td>
-            <td class="px-6 py-3 flex items-center gap-2 text-shadow-white">
-              <button class=" hover:bg-gray-400 text-shadow-white font-bold py-2 px-4 rounded inline-flex items-center">
+          <% sessions.forEach((session) => { %>
+          <tr data-session-id="<%= session.session_id %>" class="text-gray-400 hover:text-white cursor-pointer">
+            
+            <td class="text-xs px-6 py-3 font-mono" id="sessionId">session-<%=session.session_id%></td>
+            <td class="text-xs px-6 py-3"><%=session.createdAt%></td>
+            <td class="text-xs px-6 py-3"><%=session.createdAt%></td>
+            <td class="text-xs px-6 py-3"><%=session.started_by%></td>
+            <td class="text-xs px-6 py-3 flex items-center gap-2 text-shadow-white">
+              <a href="/exportsession/<%= session.session_id %>">
+              <button class="text-xs  hover:bg-gray-400 text-shadow-white font-bold py-2 px-4 rounded inline-flex items-center">
                 <svg class="fill-current w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M13 8V2H7v6H2l8 8 8-8h-5zM0 18h20v2H0v-2z"/></svg>
                 <span>Export</span>
               </button>
+              </a>
             </td>
+           
           </tr>
+          <% }) %>
 
         </tbody>
       </table>
     </div>
     </main>
   </div>
-  
+  <script src="/js/sessionShow.js"></script>
   </body>
 </html>

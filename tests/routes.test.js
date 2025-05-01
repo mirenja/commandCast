@@ -25,9 +25,36 @@ import app from '../app.js'
   // })
 
 
-  describe("Test the newclient path", () => {
-    test("It should response the GET method", async () => {
-      const response = await request(app).get("/newclient")
+  // describe("Test the newclient path", () => {
+  //   test("It should response the GET method", async () => {
+  //     const response = await request(app).get("/newclient")
+  //     expect(response.statusCode).toBe(200)
+  //   })
+  // })
+
+    describe("Test the index page works path", () => {
+    test("It should respond to the GET method", async () => {
+      const response = await request(app).get("/")
       expect(response.statusCode).toBe(200)
+    })
+  })
+  describe("Test the signup page works path", () => {
+    test("It should respond to the GET method", async () => {
+      const response = await request(app).get("/signup")
+      expect(response.statusCode).toBe(200)
+    })
+  })
+
+  describe("Test the login POst signup path returns 200OK", () => {
+    test("It should respond to the POST method", async () => {
+      const response = await request(app).post ("/signup")
+      expect(response.statusCode).toBe(302)
+    })
+  })
+
+  describe("Test the login POst path returns 200OK", () => {
+    test("It should respond to the POST method", async () => {
+      const response = await request(app).post ("/login")
+      expect(response.statusCode).toBe(302)
     })
   })

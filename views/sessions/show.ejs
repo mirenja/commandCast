@@ -1,28 +1,79 @@
 <!doctype html>
 <html>
-<%- include('../includes/head')%>
+  <%- include('../includes/head') %>
   <body>
-    <%- include('../includes/header')%>
+    <%- include('../includes/header') %>
 
-    <!-- whole content container -->
-  <div class="flex h-screen text-white bg-gray-900 font-sans">
-    <!-- Right Main Panel -->
-    <main class="flex-1 flex flex-col p-6 space-y-4 bg-gray-900">
-    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 flex justify-between items-center">
-      <div class="flex items-center gap-6 text-sm text-gray-300">
-        <span>Session: <span class="text-green-400">session-1745266099713</span></span>
-        <span>21/04/2025</span>
-        <span>🕒 Started: 22:08:19 (0m)</span>
-      </div>
-      <button class="text-xs text-gray-600 bg-white hover:bg-gray-200 px-4 py-2 rounded border border-gray-600">
-        Export Log
-      </button>
+    <!-- Whole content container -->
+    <div class="flex flex-col min-h-screen text-white bg-gray-900 font-sans">
+      <!-- Right Main Panel -->
+      <main class="flex-1 flex flex-col p-6 space-y-6">
+        <!-- Session Info -->
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 flex justify-between items-center">
+          <div class="flex flex-wrap gap-6 text-sm text-gray-300">
+            <span>Session: <span class="text-green-400">session-<%= currentSessionId.session_id %></span></span>
+            <span><%= currentSessionId.date %></span>
+            <span>|</span>
+            <span>🕒 <%= currentSessionId.time %></span>
+          </div>
+          <a href="/exportsession/<%= sessionData.session_id %>">
+          <button class="text-xs text-gray-600 bg-white hover:bg-gray-200 px-4 py-2 rounded border border-gray-600">
+            Export Log
+          </button>
+         </a>
+        
+        </div>
+
+        <!-- Session Details -->
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-6">
+          <h3 class="text-lg font-bold">Session Details</h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-gray-400">
+            <p><span class="font-semibold">Session ID:</span> <%= sessionData.session_id %></p>
+            <p><span class="font-semibold">Started By:</span> <%= sessionData.started_by %></p>
+            <p><span class="font-semibold">Created At:</span> <%= new Date(sessionData.createdAt).toLocaleString() %></p>
+          </div>
+
+          <!-- Clients Section -->
+          <h4 class="text-md font-bold mt-8">Clients:</h4>
+          <% if (sessionData.clients.length === 0) { %>
+            <p class="text-gray-400 italic">No clients joined the session.</p>
+          <% } else { %>
+            <% sessionData.clients.forEach((client) => { %>
+              <div class="border-l-4 border-gray-600 pl-6 my-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-gray-300">
+                  <p><span class="font-semibold">Client Name:</span> <%= client.name %></p>
+                  <p><span class="font-semibold">Client ID:</span> <%= client.id %></p>
+                  <p><span class="font-semibold">IP Address:</span> <%= client.ip_address %></p>
+                </div>
+
+                <!-- Commands Section -->
+                <div class="space-y-6 mt-4">
+                  <h5 class="text-white font-semibold text-md">Commands:</h5>
+                  <% client.commands.forEach((command) => { %>
+                    <div class="bg-gray-700 rounded-lg p-4 space-y-2">
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <p><span class="font-semibold">Command:</span> <%= command.command_text %></p>
+                          <p><span class="font-semibold">Category:</span> <%= command.command_category %></p>
+                        </div>
+                        <div>
+                          <h6 class="text-white font-semibold">Command Response:</h6>
+                          <% if (command.commandResponse && command.commandResponse.response_text) { %>
+                            <p class="text-gray-300"><%= command.commandResponse.response_text %></p>
+                          <% } else { %>
+                            <p class="text-gray-400 italic">No response yet.</p>
+                          <% } %>
+                        </div>
+                      </div>
+                    </div>
+                  <% }) %>
+                </div>
+              </div>
+            <% }) %>
+          <% } %>
+        </div>
+      </main>
     </div>
-    <div class="flex-1 bg-gray-900 border border-gray-700 rounded-lg flex flex-col items-center justify-center text-gray-500 p-6 text-center">
-        <p>placeholder</p>
-    </div>
-    </main>
-  </div>
-  
   </body>
 </html>

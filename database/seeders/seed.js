@@ -6,7 +6,6 @@ import '../../config/database.js'
 
 import {User} from '../../models/user.js'
 import {Session} from '../../models/session.js'
-import {CommandTemplate} from '../../models/commandtemplate.js'
 import {CommandResponse} from '../../models/commandResponse.js'
 import {Command} from '../../models/command.js'
 import {Client} from '../../models/client.js'
@@ -26,8 +25,8 @@ async function seed(){
 
         await mongoose.connection.dropDatabase()
 
-        const users = Array.from({length: 7}, () => buildUser())
-        await User.insertMany(users)
+        const fakeUsers = Array.from({length: 7}, () => buildUser())
+        const users = await User.insertMany(fakeUsers)
         console.log('Users seeded successfully!')
 
         const clients = await Client.insertMany(
@@ -38,43 +37,54 @@ async function seed(){
         const sessions  =[]
 
         for (const user of users){
+            
             const sessionNumber = faker.number.int({min:0, max:5})
             
             for (let i = 0; i < sessionNumber; i++){
 
                 const selectedClients = faker.helpers.arrayElements(clients, {min:2 , max:5})
-                const clientIds = selectedClients.map(client => client.id)
+                const clientIds = selectedClients.map(client => client._id)
 
-                const sessionData = buildSession(user.id,clientIds)
+                const sessionData = buildSession(user._id,clientIds)
                 console.log('Creating session for user:', user.name)
                 console.log('Creating session for sessionData:', sessionData)
 
                 const session = await Session.create(sessionData)
                 sessions.push(session)
+                console.log("session data added!!!!!!")
 
                 for (const client of selectedClients){
-                    client.sessions.push(session.id)
+                    client.sessions.push(session._id)
                     await client.save()
+                    console.log("client save!!!")
                 }
 
-                const commands = Array.from({length:10}, () => 
-                    buildCommand(user.id,session.id)
-                )
+                console.log("end of client creation loop")
+
+                const commands = Array.from({length:10}, () => {
+                    const randomClient = faker.helpers.arrayElement(selectedClients)
+                    // console.log("radom client selected:",randomClient)
+                    return buildCommand(user._id,session._id,randomClient._id)
+                    console.log("command succesfully built.")
+                })
+                console.log("commands generated,", commands)
+
                 const insertedCommands = await Command.insertMany(commands)
                 console.log("commands inserted generating responses.......")
 
                 const responses = insertedCommands.map(command => {
                     console.log('command being parsed is.......... : ', command)
                     const randomClient = faker.helpers.arrayElement(selectedClients)
-                    return buildCommandResponse(command.id,randomClient.id)
+                    return buildCommandResponse(command.id,randomClient._id)
                 })
                 await CommandResponse.insertMany(responses)
-
+                
+                const auditLogs = []
                 for (const command of insertedCommands){
                     const log1 = buildAuditLog(
-                        session.id,
+                        session._id,
                         'User',
-                        user.id,
+                        user._id,
                         'command_sent',
                         {
                             command_id: command.id,
@@ -82,38 +92,9 @@ async function seed(){
                             sent_at: command.createdAt
                         }
                     )
-                    ///when we get the response
-                    const response = await CommandResponse.findOne({ command_id: command.id }).lean()
-                    const log2 = response
-                      ? buildAuditLog(
-                          session.id,
-                          'Client',
-                          response.client_id,
-                          'response_received',
-                          {
-                            response_id: response.id,
-                            command_id: response.command_id,
-                            response: response.response_text,
-                            received_at: response.createdAt
-                          }
-                        )
-                      : null                
-
-                      //normaly would be populated by the middleware , should test it after adding it
-                    const extraLogs = [
-                      buildAuditLog(
-                          session.id,
-                          'Client',
-                          response.client_id,
-                          'device_joined',
-                          {joined_at:session.createdAt},
-                      ),
-                      buildAuditLog(session.id,'User',user.id,'SESSION_CLOSED')
-                    ]
-
-                    const logs = [log1, log2, ...extraLogs]
-                    await AuditLog.insertMany(logs)
+                    auditLogs.push(log1)
                 }
+                await AuditLog.insertMany(auditLogs)
             }
         }
 

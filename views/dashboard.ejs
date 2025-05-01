@@ -2,7 +2,7 @@
 <html>
 <%- include('includes/head')%>
   <body>
-    <%- include('includes/header')%>
+    <%- include('includes/header',{loggedInUser})%>
 
     <!-- whole content container -->
   <div class="flex h-screen text-white bg-gray-900 font-sans">
@@ -12,17 +12,27 @@
     <!-- Right Main Panel -->
     <main class="flex-1 flex flex-col p-6 space-y-4 bg-gray-900">
     <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 flex justify-between items-center">
-      <div class="flex items-center gap-6 text-sm text-gray-300">
-        <span>Session: <span class="text-green-400">session-1745266099713</span></span>
-        <span>21/04/2025</span>
-        <span>🕒 Started: 22:08:19 (0m)</span>
-      </div>
+      <div class="flex items-center gap-18 text-sm text-gray-300">
+        <span class="ml-2 px-2 py-1">Session: <span class="text-green-400">session-<%= currentSessionId.session_id %></span></span>
+        <span class="ml-2 px-2 py-1"><%= currentSessionId.date %></span>
+        <span class="ml-2 px-2 py-1">|</span>
+        <span class="ml-2 px-2 py-1">🕒 <%= currentSessionId.time %></span>
+      </div>   
+      <a href="/exportsession/<%= currentSessionId.session_id %>">
       <button class="text-xs text-gray-600 bg-white hover:bg-gray-200 px-4 py-2 rounded border border-gray-600">
         Export Log
       </button>
+      </a>
     </div>
     <div class="flex items-center gap-4">
       <input type="text" id="commandInput" placeholder="Connect to send commands..." class="w-full bg-gray-800 border border-gray-600 text-sm text-white px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
+      <select id="categorySelect" class="bg-gray-800 border border-gray-600 text-sm text-white px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
+        <option disabled selected>Command Category --</option>
+        <% commandCategories.forEach((category) =>  { %>
+          <option value="<%= category %>"><%= category %></option>
+        <% }) %>
+      </select>
+    
       <button onclick="sendCommand()" 
         class="bg-green-600 hover:bg-green-700 text-white text-xs px-4 py-2 rounded-s-sm">
         Send
@@ -30,10 +40,19 @@
     </div>
     <div class="flex items-center justify-between">
       <div class="flex gap-4">
-        <button class="bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">Command Results</button>
-        <button class="bg-gray-800 text-gray-400 px-4 py-2 rounded-lg text-sm">Session Logs</button>
+        <a href="/dashboard">
+          <button class="bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">Command Results</button>
+      </a>
+      <a href="/sessions">
+          <button class="bg-gray-800 text-gray-400 px-4 py-2 rounded-lg text-sm">Session Logs</button>
+      </a>
+        
+        
       </div>
-      <button class="bg-white hover:bg-gray-200 text-gray-600 text-xs px-4 py-2 rounded-md border border-gray-600">Clear Results</button>
+      <button onclick="clearResults()" 
+        class="bg-white hover:bg-gray-200 text-gray-600 text-xs px-4 py-2 rounded-md border border-gray-600">
+        Clear Results
+     </button>
     </div>
 
     <div class="flex-1 bg-gray-900 border border-gray-700 rounded-lg flex flex-col items-center justify-center text-gray-500 p-6 text-center">
@@ -41,9 +60,7 @@
     </div>
     </main>
   </div>
-  <script id="clientData" type="application/json">
-    <%- JSON.stringify(clients) %>
-  </script>
+
   <script src="/js/command.js"></script>
   </body>
 </html>
