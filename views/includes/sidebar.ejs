@@ -36,6 +36,23 @@
         <% } %>
       <% }) %>
     </div>
+    <nav class="mt-4 p-2 border-t border-gray-700 text-sm text-gray-800 flex justify-between">
+      <% if (currentPage > 1) { %>
+        <a href="?page=<%= currentPage - 1 %>" class="hover:underline">← Previous</a>
+      <% } else { %>
+        <span class="text-gray-800">← Previous</span>
+      <% } %>
+
+      <span>Page <%= currentPage %> of <%= totalPages %></span>
+
+      <% if (currentPage < totalPages) { %>
+        <a href="?page=<%= currentPage + 1 %>" class="hover:underline">Next →</a>
+      <% } else { %>
+        <span class="text-gray-800">Next →</span>
+      <% } %>
+    </nav>
+   
+    
     </aside>
     <script src="/js/main.js"></script>
 

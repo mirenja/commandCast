@@ -129,20 +129,7 @@ app.post('/login',
       // console.log("Status Code:", response.statusCode)
       // console.log(response.getHeaders())
 
-      // verify on middleware
-      // function authenticateToken(req, res, next) {
-      //   const authHeader = req.headers['authorization']
-      //   const token = authHeader && authHeader.split(' ')[1]
       
-      //   if (!token) return res.sendStatus(401)
-      
-      //   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-      //     if (err) return res.sendStatus(403)
-      
-      //     req.user = user
-      //     next()
-      //   })
-      // }
       
 
   }catch(error){
@@ -275,9 +262,14 @@ app.post('/passwordReset',
 
 
 app.get('/dashboard',authenticateToken, async (request, response) => {
-    const clients = await Client.find({}).sort({ updatedAt: -1 }).exec()
+    
+    const { page = 1, limit = 6 } = request.query
+
+    const clients = await Client.find({}).sort({ updatedAt: -1 }).limit(limit * 1).skip((page - 1) * limit).exec()
     const onlineCount = clients.filter(client => client.status === 'online').length
     const offlineCount = clients.filter(client => client.status === 'offline').length
+    const count = await Client.countDocuments()
+    const totalPages = Math.ceil(count / limit)
     const commandCategories = [
       'General Monitoring',
       'System Info',
@@ -293,27 +285,50 @@ app.get('/dashboard',authenticateToken, async (request, response) => {
 
     // console.log("logged in user in dashoute",loggedInUser)
     //console.log(clients)
-    response.render('dashboard',{clients,onlineCount,offlineCount,currentSessionId,commandCategories})
+    response.render('dashboard',{clients,onlineCount,offlineCount,currentSessionId,commandCategories,totalPages,currentPage: Number(page)})
 })
 
 
 
 app.get('/sessions',authenticateToken, async (request,response) => {
   try{
-    const clients = await Client.find({}).sort({ updatedAt: -1 }).exec()
+    
+    const page = parseInt(request.query.page) || 1
+    const sessionpage = parseInt(request.query.page) || 1
+    const clientlimit = parseInt(request.query.clientlimit) || 6
+    const sessionlimit = parseInt(request.query.sessionlimit) || 10
+
+    const clients = await Client.find({}).sort({ updatedAt: -1 }).limit(clientlimit * 1).skip((page - 1) * clientlimit).exec()
     const onlineCount = clients.filter(client => client.status === 'online').length
     const offlineCount = clients.filter(client => client.status === 'offline').length
+
+    const clientcount = await Client.countDocuments()
+    const totalPages = Math.ceil(clientcount / clientlimit)
+
     // console.log('Clients fetched:', clients)
     const currentSessionId =request.cookies.sessionCookie
     const loggedInUser = response.locals.loggedInUser
     let sessions
     if (loggedInUser.isAdmin){
-      sessions= await Session.find({}).sort({ updatedAt: -1 }).exec()
+      sessions= await Session.find({}).sort({ updatedAt: -1 }).limit(sessionlimit * 1).skip((page - 1) * sessionlimit).exec()
     }else {
-      sessions = await Session.find({ started_by: loggedInUser._id }).sort({ updatedAt: -1 }).exec()
+      sessions = await Session.find({ started_by: loggedInUser._id }).sort({ updatedAt: -1 }).limit(sessionlimit * 1).skip((page - 1) * sessionlimit).exec()
     }
+    const sessioncount = await Session.countDocuments()
+    const sessiontotalPages = Math.ceil(sessioncount / sessionlimit)
     // console.log("The current session logs are",sessions)
-    response.render('sessions/index',{clients,onlineCount,offlineCount,sessions,currentSessionId})
+    const search = request.query.search?.trim()?.toLowerCase();
+    if (search) {
+      sessions = sessions.filter(session => 
+        session.session_id?.toLowerCase().includes(search))
+    }
+
+
+    if (request.xhr) {
+      return response.render('sessions/_table', { sessions })
+    }
+    response.render('sessions/index',{clients,onlineCount,offlineCount,sessions,currentSessionId,totalPages,currentPage: Number(page),sessiontotalPages,sessionPage: Number(sessionpage)})
+    
   }catch (error){
     console.error('Error fetching clients:', error)
   }
