@@ -7,7 +7,7 @@
     <!-- whole content container -->
   <div class="flex h-screen text-white bg-gray-900 font-sans">
     <!-- Connected Clients Sidebar -->
-  
+   
 
     <!-- Right Main Panel -->
     <main class="flex-1 flex flex-col p-6 space-y-4 bg-gray-900">
@@ -18,40 +18,34 @@
           <span class="ml-2 px-2 py-1">|</span>
           <span class="px-2 py-1 ml-5 mr-"> 🕒 <%= currentSessionId.time %></span>
         </div> 
-        <div>
-          <a href="/newclient" class="block w-full max-w-md mt-4"><button type="button" class="w-full p-3 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400">
-            Add a Client
-              </button>
-              </a>
-        </div>
-        
+      
     </div>
     <div class="flex items-center gap-4">
     </div>
-  
-   
 
     <div class="flex-1 bg-gray-900 border border-gray-700 rounded-lg flex flex-col items-center justify-start text-gray-500 p-6 text-center">
       <table class="min-w-full text-left">
         <thead class="bg-gray-800 text-gray-400 text-sm">
           <tr>
-            <th class="px-6 py-3">Client Name</th>
-            <th class="px-6 py-3">Client IP</th>
-            <th class="px-6 py-3">Last Change</th>
+            <th class="px-6 py-3">UserName</th>
+            <th class="px-6 py-3">Email</th>
+            <th class="px-6 py-3">IsAdmin</th>
+            <th class="px-6 py-3">Last Update</th>
             <th class="px-6 py-3"></th>
           </tr>
         </thead>
         <tbody>
-          <% clients.forEach((client) => { %>
-          <tr >
+          <% users.forEach((user) => { %>
+          <tr class="text-gray-400 hover:text-white cursor-pointer">
             
-            <td class="text-xs px-6 py-3 font-mono" ><%=client.name%></td>
-            <td class="text-xs px-6 py-3"><%=client.ip_address%></td>
-            <td class="text-xs px-6 py-3"><%=client.updatedAt%></td>
+            <td class="text-xs px-6 py-3 font-mono" id="sessionId"><%=user.name%></td>
+            <td class="text-xs px-6 py-3"><%=user.email%></td>
+            <td class="text-xs px-6 py-3"><%=user.isAdmin%></td>
+            <td class="text-xs px-6 py-3"><%=user.updatedAt%></td>
             <td class="text-xs px-6 py-3 flex items-center gap-2 text-shadow-white">
-              <a href="/clients/<%=client._id%>" >
+              <a href="/userManagement/<%= user._id %>">
               <button class="text-xs  hover:bg-gray-400 text-shadow-white font-bold py-2 px-4 rounded inline-flex items-center">
-                   <span>Update</span>
+                <span>Manage User</span>
               </button>
               </a>
             </td>
@@ -64,6 +58,5 @@
     </div>
     </main>
   </div>
-
   </body>
 </html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<%- include('../includes/head')%>
+  <body>
+    <%- include('../includes/header')%>
+
+    <!-- whole content container -->
+  <div class="flex h-screen text-white bg-gray-900 font-sans">
+    <!-- Right Main Panel -->
+    <main class="flex-1 flex flex-col p-6 space-y-4 bg-gray-900">
+    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 flex justify-between items-center">
+      <div class="flex items-center gap-6 text-sm text-gray-300">
+        <span>Session: <span class="text-green-400">session-1745266099713</span></span>
+        <span>21/04/2025</span>
+        <span>🕒 Started: 22:08:19 (0m)</span>
+      </div>
+  
+    </div>
+    <div class="flex-1 bg-gray-900 border border-gray-700 rounded-lg flex flex-col items-center justify-center text-gray-500 p-6 text-center">
+       <form action="/newclient" method="post">
+        <input type="text" name="name" placeholder="Name" required class="mb-2 px-4 py-2 rounded border border-gray-600 text-shadow-white placeholder-gray-600" /><br />
+        <input type="text" name="mac_address" placeholder="MAC Address" required class="mb-2 px-4 py-2 rounded border border-gray-600 text-shadow-white placeholder-gray-600" /><br />
+        <input type="text" name="ip_address" placeholder="IP Address" required class="mb-2 px-4 py-2 rounded border border-gray-600 text-shadow-white placeholder-gray-600" /><br />
+        <button class="text-xs text-gray-600 bg-white hover:bg-gray-200 px-4 py-2 rounded border border-gray-600">
+          ADD DEVICE
+        </button>
+       </form>
+    </div>
+    </main>
+  </div>
+  
+  </body>
+</html>

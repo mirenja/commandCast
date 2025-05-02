@@ -12,4 +12,7 @@ const clientSchema = new Schema({
     },
     { timestamps: true })
 
+
+clientSchema.index({ sessions: 1 })
+
 export const Client = mongoose.model('Client',clientSchema)

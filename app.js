@@ -1,4 +1,7 @@
+import "./instrument.mjs"
 import express from 'express'
+import * as Sentry from "@sentry/node"
+
 
 import cookieParser from 'cookie-parser'
 import { PORT,SSH_PASSWORD,username} from './config/app.js'
@@ -9,11 +12,16 @@ import { authenticateToken} from './middlewares/authenticateToken.js'
 import { generatedSalt,hashPassword } from './services/passwordHashing.js'
 import crypto from 'crypto'
 import {fileAndSystemCommands} from './services/commandwhitelist.js'
+import validator from 'validator'
+
+
+
 
 
 
 
 import { logger } from './middlewares/logger.js'
+import { isAdmin } from "./middlewares/isAdmin.js"
 import { signupValidationRules,validate } from './middlewares/signUpValidate.js'
 
 
@@ -37,8 +45,10 @@ import { body, validationResult } from 'express-validator'
 const app =express()
 
 app.set('view engine', 'ejs')
+
 app.use(express.static('public'))
 app.use(cookieParser())
+
 
 // to read the form requests body
 app.use(express.json())
@@ -48,6 +58,7 @@ app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
 app.use(setCurrentUser)
 app.use(logger)
+
 
 
 export const connections = new Map()
@@ -65,7 +76,7 @@ app.post('/login',
       //console.log('BODY:', request.body)
       validationResult(request).throw()
       const { email, password } = request.body
-      console.log(email, password)
+      // console.log(email, password)
 
 
       // console.log('user email:',email)
@@ -112,40 +123,24 @@ app.post('/login',
         maxAge: 3600000,
       })
 
-      console.log("the token is",token)
+      // console.log("the token is",token)
       response.redirect('/dashboard')
-      console.log("THE RESPONSE HEADER!!!")
-      console.log("Status Code:", response.statusCode)
-      console.log(response.getHeaders())
+      // console.log("THE RESPONSE HEADER!!!")
+      // console.log("Status Code:", response.statusCode)
+      // console.log(response.getHeaders())
 
-      // verify on middleware
-      // function authenticateToken(req, res, next) {
-      //   const authHeader = req.headers['authorization']
-      //   const token = authHeader && authHeader.split(' ')[1]
       
-      //   if (!token) return res.sendStatus(401)
-      
-      //   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-      //     if (err) return res.sendStatus(403)
-      
-      //     req.user = user
-      //     next()
-      //   })
-      // }
       
 
   }catch(error){
-      // console.error(error)
-      // if (Array.isArray(error.errors)) {
-      //   console.log("All validation errors:")
-      //   console.log(error.errors)
-        const messages = error.errors.map(err => err.msg)
-        let firstMessage = messages[0]
-        // if (error.errors.some(err => err.param === 'email')){
-        //   firstMessage = "invalid Email"
-        // }
-        response.redirect('/?message=' + encodeURIComponent(firstMessage)) 
-      }
+    if (Array.isArray(error.errors)) {
+      const messages = error.errors.map(err => err.msg);
+      let firstMessage = messages[0];
+      response.redirect('/?message=' + encodeURIComponent(firstMessage));
+    } else {
+      response.redirect('/?message=' + encodeURIComponent('An unexpected error occurred'));
+    }  
+}
       
   }
 )
@@ -267,42 +262,80 @@ app.post('/passwordReset',
 
 
 app.get('/dashboard',authenticateToken, async (request, response) => {
-    const clients = await Client.find({}).sort({ updatedAt: -1 }).exec()
+    
+    const { page = 1, limit = 6 } = request.query
+
+    const clients = await Client.find({}).sort({ updatedAt: -1 }).limit(limit * 1).skip((page - 1) * limit).exec()
     const onlineCount = clients.filter(client => client.status === 'online').length
     const offlineCount = clients.filter(client => client.status === 'offline').length
+    const count = await Client.countDocuments()
+    const totalPages = Math.ceil(count / limit)
     const commandCategories = [
       'General Monitoring',
       'System Info',
       'Networking',
       'Configuration'
     ]
-    
-    const loggedInUser = request.loggedInUser
+    console.log("THE SESSION COOKIES!!!")
+  
+    // const loggedInUser = request.user
+    // console.log(loggedInUser)
     const currentSessionId =request.cookies.sessionCookie
     // =request.session._id
 
     // console.log("logged in user in dashoute",loggedInUser)
     //console.log(clients)
-    response.render('dashboard',{loggedInUser,clients,onlineCount,offlineCount,currentSessionId,commandCategories})
+    response.render('dashboard',{clients,onlineCount,offlineCount,currentSessionId,commandCategories,totalPages,currentPage: Number(page)})
 })
 
 
 
-app.get('/sessions', async (request,response) => {
+app.get('/sessions',authenticateToken, async (request,response) => {
   try{
-    const clients = await Client.find({}).sort({ updatedAt: -1 }).exec()
+    
+    const page = parseInt(request.query.page) || 1
+    const sessionpage = parseInt(request.query.page) || 1
+    const clientlimit = parseInt(request.query.clientlimit) || 6
+    const sessionlimit = parseInt(request.query.sessionlimit) || 10
+
+    const clients = await Client.find({}).sort({ updatedAt: -1 }).limit(clientlimit * 1).skip((page - 1) * clientlimit).exec()
     const onlineCount = clients.filter(client => client.status === 'online').length
     const offlineCount = clients.filter(client => client.status === 'offline').length
+
+    const clientcount = await Client.countDocuments()
+    const totalPages = Math.ceil(clientcount / clientlimit)
+
     // console.log('Clients fetched:', clients)
     const currentSessionId =request.cookies.sessionCookie
-    const sessions= await Session.find({}).sort({ updatedAt: -1 }).exec()
+    const loggedInUser = response.locals.loggedInUser
+    let sessions
+    if (loggedInUser.isAdmin){
+      sessions= await Session.find({}).sort({ updatedAt: -1 }).limit(sessionlimit * 1).skip((page - 1) * sessionlimit).exec()
+    }else {
+      sessions = await Session.find({ started_by: loggedInUser._id }).sort({ updatedAt: -1 }).limit(sessionlimit * 1).skip((page - 1) * sessionlimit).exec()
+    }
+    const sessioncount = await Session.countDocuments()
+    const sessiontotalPages = Math.ceil(sessioncount / sessionlimit)
     // console.log("The current session logs are",sessions)
-    response.render('sessions/index',{clients,onlineCount,offlineCount,sessions,currentSessionId})
+    const search = request.query.search?.trim()?.toLowerCase();
+    if (search) {
+      sessions = sessions.filter(session => 
+        session.session_id?.toLowerCase().includes(search))
+    }
+
+
+    if (request.xhr) {
+      return response.render('sessions/_table', { sessions })
+    }
+    response.render('sessions/index',{clients,onlineCount,offlineCount,sessions,currentSessionId,totalPages,currentPage: Number(page),sessiontotalPages,sessionPage: Number(sessionpage)})
+    
   }catch (error){
     console.error('Error fetching clients:', error)
   }
 })
-app.get('/sessions/:session_id', async (request,response) => {
+
+
+app.get('/sessions/:session_id',authenticateToken, async (request,response) => {
   try{
     const currentSessionId =request.cookies.sessionCookie
     const session_id = request.params.session_id
@@ -342,7 +375,7 @@ app.get('/sessions/:session_id', async (request,response) => {
   }
 })
 
-app.get('/exportsession/:session_id', async (request, response) => {
+app.get('/exportsession/:session_id',authenticateToken, async (request, response) => {
   const session_id = request.params.session_id
   console.log("SESSION EX",session_id)
   console.log(session_id)
@@ -403,15 +436,15 @@ app.get('/exportsession/:session_id', async (request, response) => {
 
 
 
-app.get('/newclient', (request,response) => {
-    response.render('clients/show')
+app.get('/newclient',authenticateToken, (request,response) => {
+    response.render('clients/newClient')
 })
 
 app.post('/newclient',
   body('name').isString().trim().escape(),
   body('mac_address').isString().trim().escape(),
-  body('ip_address').custom((value) => {
-    if (!validator.isIP(request.body.ip_address)) {
+  body('ip_address').custom((value, { req }) => {
+    if (!validator.isIP(value)) {
       throw new Error('Invalid IP address')
     }
     return true
@@ -432,12 +465,66 @@ app.post('/newclient',
         await newClient.save()
         response.redirect('/dashboard?message=Device+added+successfully')
     }catch(error){
-        // console.error(error)
-        response.redirect('/?message='+error)
+      console.log("device error")
+        console.error(error)
+        response.redirect('/dashboard?message='+error)
     }
 })
 
-app.post('/connect',
+app.get('/clients',authenticateToken, isAdmin, async (request, response) => {
+  const clients = await Client.find({})
+  const currentSessionId =request.cookies.sessionCookie
+  response.render('clients/index', { clients,currentSessionId })
+})
+
+app.get('/clients/:client_id',authenticateToken, isAdmin, async (request, response) => {
+  const client_id = request.params.client_id
+  const selectedClient = await Client.findOne({ _id : client_id})
+  const currentSessionId =request.cookies.sessionCookie
+  response.render('clients/show', { currentSessionId,selectedClient})
+})
+
+app.post('/clients/:client_id/update',authenticateToken, isAdmin, async (request, response) => {
+  try {
+    const { name, ip_address } = request.body
+    const client_id = request.params.client_id
+    // console.log("THE CLIENT ID",id)
+    const updatedClient = await Client.findOneAndUpdate(
+      { _id : client_id},
+      {name,ip_address},
+      { new: true }
+    )
+    const currentSessionId =request.cookies.sessionCookie
+    response.redirect('/clients')
+
+
+  }catch (error) {
+    console.error(error)
+    response.send('Error:.',error)
+  }
+ 
+})
+
+app.post('/clients/:client_id/delete',authenticateToken, isAdmin, async (request, response) => {
+  try {
+    await Client.findByIdAndDelete(request.params.client_id)
+    console.log("client deleted")
+    const currentSessionId =request.cookies.sessionCookie
+    response.redirect('/clients')
+
+
+  }catch (error) {
+    console.error(error)
+    response.send('Error: No client deleted.')
+  }
+ 
+})
+
+
+
+////
+
+app.post('/connect',authenticateToken,
   
   async (request,response) => {
     const ip_address = request.body.ip_address//when we put auntentication is should use the logged in user
@@ -495,7 +582,7 @@ app.post('/connect',
 
 
 
-  app.post('/sendCommand',
+  app.post('/sendCommand',authenticateToken,
     body('command').isString().trim().escape(),
     async (request,response) => {
     const { command ,category } = request.body
@@ -563,9 +650,71 @@ app.post('/connect',
     }
     })
 
+    //management Routes
+    // app.get('/userManagement', authenticateToken, isAdmin, async (req, res) => {
+    //   const users = await User.find({})
+    //   res.render('management/users', { users })
+    // })
+
+     app.get('/userManagement',authenticateToken, isAdmin, async (request, response) => {
+      const users = await User.find({})
+      const currentSessionId =request.cookies.sessionCookie
+      response.render('management/users', { users,currentSessionId })
+    })
+
+    app.get('/userManagement/:user_id',authenticateToken, isAdmin, async (request, response) => {
+      const user_id = request.params.user_id
+      const user = await User.findOne({ _id : user_id})
+      const currentSessionId =request.cookies.sessionCookie
+      response.render('management/editUser', { currentSessionId,user })
+    })
+
+    app.post('/userManagement/:user_id/delete',authenticateToken, isAdmin, async (request, response) => {
+      try {
+        await User.findByIdAndDelete(request.params.user_id)
+        console.log("user deleted")
+        const currentSessionId =request.cookies.sessionCookie
+        response.redirect('/userManagement')
+
+
+      }catch (error) {
+        console.error(error)
+        response.send('Error: No cookie was deleted.')
+      }
+     
+    })
+
+    app.post('/userManagement/:user_id/update',authenticateToken, isAdmin, async (request, response) => {
+      try {
+        const { name, email, isAdmin } = request.body
+        const role = request.body.isAdmin === 'true'
+        const updatedUser = await User.findOneAndUpdate(
+          {email:email},
+          {name,email,isAdmin:!!role },
+          { new: true }
+        )
+        console.log("USERR UPDATED",updatedUser)
+
+        const currentSessionId =request.cookies.sessionCookie
+        response.redirect('/userManagement')
+
+
+      }catch (error) {
+        console.error(error)
+        response.send('Error:.',error)
+      }
+     
+    })
+
+
+    // app.get("/debug-sentry", function mainHandler(request, response) {
+    //   throw new Error("My first Sentry error!");
+    // })
+    
 
 
 
+Sentry.setupExpressErrorHandler(app)
 
 
 

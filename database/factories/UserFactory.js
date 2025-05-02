@@ -8,6 +8,6 @@ export const buildUser = () => {
         name: faker.person.fullName(),
         email: faker.internet.email(),
         password: faker.internet.password(),
-        role: faker.helpers.arrayElement(['admin', 'user'])
+        isAdmin: faker.datatype.boolean()
     })
 }

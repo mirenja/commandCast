@@ -2,12 +2,12 @@
 <html>
 <%- include('includes/head')%>
   <body>
-    <%- include('includes/header',{loggedInUser})%>
+    <%- include('includes/header')%>
 
     <!-- whole content container -->
   <div class="flex h-screen text-white bg-gray-900 font-sans">
     <!-- Connected Clients Sidebar -->
-    <%- include('includes/sidebar.ejs',{clients,onlineCount,offlineCount})%>
+    <%- include('includes/sidebar.ejs',{clients,onlineCount,offlineCount,currentPage,totalPages})%>
 
     <!-- Right Main Panel -->
     <main class="flex-1 flex flex-col p-6 space-y-4 bg-gray-900">

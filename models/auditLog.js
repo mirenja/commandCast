@@ -11,4 +11,7 @@ const auditLogSchema = new Schema({
     },
     { timestamps: true })
 
+auditLogSchema.index({ session_id: 1 })
+auditLogSchema.index({ actor_id: 1 })
+
 export const AuditLog = mongoose.model('AuditLog', auditLogSchema)

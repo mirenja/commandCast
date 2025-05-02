@@ -22,18 +22,18 @@ export const signupValidationRules = [
   body('confirm_password')
     .isString()
     .isLength({ min: 10, max: 20 })
-    .custom((value, { request }) => {
-      if (value !== request.body.password) throw new Error('Passwords do not match')   
+    .custom((value, { req }) => {
+      if (value !== req.body.password) throw new Error('Passwords do not match')   
       return true   
     })
 ]   
 
-export const validate = (request, res, next) => {
+export const validate = (request, response, next) => {
     const errors = validationResult(request)    
     if (!errors.isEmpty()) {
       const messages = errors.array().map(err => err.msg)    
       const firstMessage = messages[0] === 'Invalid value' ? 'Invalid email' : messages[0]    
-      return res.redirect('/signup?message=' + encodeURIComponent(firstMessage))    
+      return response.redirect('/signup?message=' + encodeURIComponent(firstMessage))    
     }
     next()    
   }    

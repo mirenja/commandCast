@@ -1,0 +1,37 @@
+name: Continuous Deployment (CD)
+
+on:
+    pull_request:
+        types:
+            - closed
+        branches:
+            - main
+        
+jobs:
+  build:
+    # Allow the job to fetch a GitHub ID token
+    permissions:
+      id-token: write
+      contents: read
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v1'
+        with:
+          create_credentials_file: true
+          workload_identity_provider: 'projects/227235535684/locations/global/workloadIdentityPools/coreassesment/providers/github'
+          service_account: 'jillkenyani@gmail.com'
+      - id: 'deploy'
+        uses: 'google-github-actions/deploy-appengine@v2'
+      - id: 'test'
+        run: 'curl "${{ steps.deploy.outputs.version_url }}"'
+
+
+
+
+
