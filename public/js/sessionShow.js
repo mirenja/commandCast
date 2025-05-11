@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('searchButton').addEventListener('click', function(e) {
     e.preventDefault()
-    console.log("search is clicked")
+    // console.log("search is clicked")
 
     let searchValue = document.getElementById('sessionSearchInput').value.trim()
     console.log("searched value--------",searchValue)
@@ -33,6 +33,18 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(response => response.text())
         .then(data => {
           document.getElementById('sessionContent').innerHTML = data 
+          ///
+          const rows = document.querySelectorAll('tbody tr')
+          rows.forEach(row => {
+            row.addEventListener('click', () => {
+              const sessionId = row.getAttribute('data-session-id')
+              if (sessionId) {
+                window.location.href = `/sessions/${sessionId}`
+              }
+            })
+          })
+          ///
+          
         })
         .catch(error => {
           console.error('search Error:', error) 
