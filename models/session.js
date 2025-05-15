@@ -10,6 +10,9 @@ const sessionSchema = new mongoose.Schema({
     },
     { timestamps: true })
 
+sessionSchema.index({ session_id: 1 })
+sessionSchema.index({ started_by: 1 })
+
 export const Session = mongoose.model('Session', sessionSchema)
 
 

@@ -7,7 +7,7 @@
     <!-- whole content container -->
   <div class="flex h-screen text-white bg-gray-900 font-sans">
     <!-- Connected Clients Sidebar -->
-    <%- include('../includes/sidebar.ejs')%>
+    <%- include('../includes/sidebar.ejs',{clients,onlineCount,offlineCount,currentPage,totalPages})%>
 
     <!-- Right Main Panel -->
     <main class="flex-1 flex flex-col p-6 space-y-4 bg-gray-900">
@@ -28,52 +28,42 @@
     </div>
     <div class="flex items-center justify-between">
       <div class="flex gap-4">
-        <button class="bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">Command Results</button>
-        <button class="bg-gray-800 text-gray-400 px-4 py-2 rounded-lg text-sm">Session Logs</button>
+        <a href="/dashboard">
+          <button class="bg-gray-700 text-white px-4 py-2 rounded-lg text-sm">Command Results</button>
+        </a>
+        <a href="/sessions">
+          <button class="bg-gray-800 text-gray-400 px-4 py-2 rounded-lg text-sm">Session Logs</button>
+        </a>
       </div>
 
     </div>
     <div class="mb-4 flex items-center gap-4">
-      <input type="text" placeholder="Search sessions..." class="w-full bg-white text-gray-800 px-4 py-2 rounded-md text-sm" />
-      <button class="bg-white text-xs text-gray-600 px-4 py-2 rounded-md border border-gray-300">
+      <input type="text" placeholder="enter session_id..." class="w-full bg-white text-gray-800 px-4 py-2 rounded-md text-sm" id="sessionSearchInput"  />
+      <button class="bg-white text-xs text-gray-600 px-4 py-2 rounded-md border border-gray-300" id="searchButton">
        Search
       </button>
     </div>
+    <div id="sessionContent">
+      <%- include('./_table', { sessions }) %>
 
-    <div class="flex-1 bg-gray-900 border border-gray-700 rounded-lg flex flex-col items-center justify-center text-gray-500 p-6 text-center">
-      <table class="min-w-full text-left">
-        <thead class="bg-gray-800 text-gray-400 text-sm">
-          <tr>
-            <th class="px-6 py-3">Session ID</th>
-            <th class="px-6 py-3">Start Time</th>
-            <th class="px-6 py-3">Duration</th>
-            <th class="px-6 py-3">Commands</th>
-            <th class="px-6 py-3"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <% sessions.forEach((session) => { %>
-          <tr data-session-id="<%= session.session_id %>" class="text-gray-400 hover:text-white cursor-pointer">
-            
-            <td class="text-xs px-6 py-3 font-mono" id="sessionId">session-<%=session.session_id%></td>
-            <td class="text-xs px-6 py-3"><%=session.createdAt%></td>
-            <td class="text-xs px-6 py-3"><%=session.createdAt%></td>
-            <td class="text-xs px-6 py-3"><%=session.started_by%></td>
-            <td class="text-xs px-6 py-3 flex items-center gap-2 text-shadow-white">
-              <a href="/exportsession/<%= session.session_id %>">
-              <button class="text-xs  hover:bg-gray-400 text-shadow-white font-bold py-2 px-4 rounded inline-flex items-center">
-                <svg class="fill-current w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M13 8V2H7v6H2l8 8 8-8h-5zM0 18h20v2H0v-2z"/></svg>
-                <span>Export</span>
-              </button>
-              </a>
-            </td>
-           
-          </tr>
-          <% }) %>
-
-        </tbody>
-      </table>
     </div>
+    <nav class="mt-4 p-2 border-t border-gray-700 text-sm text-shadow-white flex justify-between">
+      <% if (sessionPage > 1) { %>
+        <a href="?page=<%= sessionPage  - 1 %>" class="hover:underline">← Previous</a>
+      <% } else { %>
+        <span class="text-shadow-white">← Previous</span>
+      <% } %>
+
+      <span>Page <%= sessionPage %> of <%= sessiontotalPages %></span>
+
+      <% if (sessionPage < sessiontotalPages) { %>
+        <a href="?page=<%= currentPage + 1 %>" class="hover:underline">Next →</a>
+      <% } else { %>
+        <span class="text-shadow-white">Next →</span>
+      <% } %>
+    </nav>
+
+   
     </main>
   </div>
   <script src="/js/sessionShow.js"></script>

@@ -1,33 +1,53 @@
 <!doctype html>
 <html>
-<%- include('../includes/head')%>
+  <%- include('../includes/head') %>
   <body>
-    <%- include('../includes/header')%>
+    <%- include('../includes/header') %>
 
-    <!-- whole content container -->
-  <div class="flex h-screen text-white bg-gray-900 font-sans">
-    <!-- Right Main Panel -->
-    <main class="flex-1 flex flex-col p-6 space-y-4 bg-gray-900">
-    <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 flex justify-between items-center">
-      <div class="flex items-center gap-6 text-sm text-gray-300">
-        <span>Session: <span class="text-green-400">session-1745266099713</span></span>
-        <span>21/04/2025</span>
-        <span>🕒 Started: 22:08:19 (0m)</span>
-      </div>
-  
+    <!-- Whole content container -->
+    <div class="flex flex-col min-h-screen text-white bg-gray-900 font-sans">
+      <!-- Right Main Panel -->
+      <main class="flex-1 flex flex-col p-6 space-y-6">
+        <!-- Session Info -->
+        <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 flex justify-between items-center">
+          <div class="flex flex-wrap gap-6 text-sm text-gray-300">
+            <span>Session: <span class="text-green-400">session-<%= currentSessionId.session_id %></span></span>
+            <span><%= currentSessionId.date %></span>
+            <span>|</span>
+            <span>🕒 <%= currentSessionId.time %></span>
+          </div>
+        </div>
+
+        <!-- Client Info -->
+        <div class="flex flex-col items-center justify-center bg-gray-900 border border-gray-700 rounded-lg p-6 min-h-screen text-gray-500">
+          <form action="/clients/<%=selectedClient._id%>/update" method="POST" class="w-full max-w-md space-y-4">
+            <input type="hidden" name="id" value="<%= selectedClient.id %>">
+            <label class="block text-sm text-gray-300" for="name">Client Name</label>
+            <input type="text" name="name" value="<%= selectedClient.name %>" class="w-full p-3 bg-gray-800 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            
+            <label class="block text-sm text-gray-300" for="ip_address">IP Address</label>
+            <input type="ip_address" name="ip_address" value="<%= selectedClient.ip_address %>" class="w-full p-3 bg-gray-800 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            
+            <button type="submit" class="w-md p-3 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400">Save Changes</button>
+          </form>
+          
+          <!-- Delete Client Form -->
+          <form action="/clients/<%=selectedClient._id%>/delete" method="POST" class="w-full max-w-md mt-4">
+            <input type="hidden" name="_id" value="<%= selectedClient._id %>">
+            <button 
+              type="submit" 
+              class="w-full p-3 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400">
+              Delete Client
+            </button>
+          </form>
+
+          <!-- Add New Client Button -->
+          <a href="/newclient" class="block w-full max-w-md mt-4"><button type="button" class="w-full p-3 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400">
+        Add a Client
+          </button>
+          </a>
+        </div>
+      </main>
     </div>
-    <div class="flex-1 bg-gray-900 border border-gray-700 rounded-lg flex flex-col items-center justify-center text-gray-500 p-6 text-center">
-       <form action="/newclient" method="post">
-        <input type="text" name="name" placeholder="Name" required class="mb-2 px-4 py-2 rounded border border-gray-600 text-shadow-white placeholder-gray-600" /><br />
-        <input type="text" name="mac_address" placeholder="MAC Address" required class="mb-2 px-4 py-2 rounded border border-gray-600 text-shadow-white placeholder-gray-600" /><br />
-        <input type="text" name="ip_address" placeholder="IP Address" required class="mb-2 px-4 py-2 rounded border border-gray-600 text-shadow-white placeholder-gray-600" /><br />
-        <button class="text-xs text-gray-600 bg-white hover:bg-gray-200 px-4 py-2 rounded border border-gray-600">
-          ADD DEVICE
-        </button>
-       </form>
-    </div>
-    </main>
-  </div>
-  
   </body>
 </html>

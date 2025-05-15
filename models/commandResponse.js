@@ -7,4 +7,6 @@ const commandResponseSchema = new Schema({
     },
     { timestamps: true })
 
+commandResponseSchema.index({ command_id: 1 })
+
 export const CommandResponse = mongoose.model('CommandResponse', commandResponseSchema)
