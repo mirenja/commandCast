@@ -73,7 +73,7 @@ app.post('/login',
   body('password').isString().isLength({ max: 20 }).withMessage("invalid password").trim().escape(),
    async(request,response) => {
   try{ 
-      //console.log('BODY:', request.body)
+      console.log('BODY:', request.body)
       validationResult(request).throw()
       const { email, password } = request.body
       // console.log(email, password)
@@ -82,16 +82,18 @@ app.post('/login',
       // console.log('user email:',email)
 
       const validatedUser = await validateUser(email,password)
-      // console.log("validated user is:",validatedUser)
+      console.log("validated user is:",validatedUser)
 
       
       const token = await generateAccessToken({ userId: validatedUser._id })
+       console.log("token",token)
       const session = new Session({
         session_id:crypto.randomBytes(8).toString('hex'),
         started_by: validatedUser._id
       })
-      // console.log("session id for crypto",session.session_id)
+      console.log("session id for crypto",session.session_id)
       await session.save()
+      console.log("we have now saved the session")
 
 
       response.cookie('token',token,{
@@ -125,7 +127,8 @@ app.post('/login',
 
       // console.log("the token is",token)
       response.redirect('/dashboard')
-      // console.log("THE RESPONSE HEADER!!!")
+      console.log("THE RESPONSE HEADER!!!")
+      // console.log(response)
       // console.log("Status Code:", response.statusCode)
       // console.log(response.getHeaders())
 
@@ -177,6 +180,7 @@ app.get('/signup', async (request, response) => {
 app.post('/signup',signupValidationRules, validate,async(request,response) => {
   try{ 
 
+    // console.log('Inside /signup route')
     const salt = await generatedSalt()
     const hashedPassword = await hashPassword(request.body.password, salt)
 
@@ -188,8 +192,9 @@ app.post('/signup',signupValidationRules, validate,async(request,response) => {
     })
 
     await newUser.save()
+    // console.log('User saved, about to redirect')
 
-    console.log("user added!!")
+    // console.log("user added!!")
     response.redirect('/?message=User+added+successfully')
 
   }catch(error){
@@ -222,7 +227,7 @@ app.post('/passwordReset',
   async(request,response) => {
   try{ 
       validationResult(request).throw()
-      console.log('BODY:', request.body)
+      //console.log('BODY:', request.body)
 
       const password = request.body.password
       const confirm_password = request.body.confirm_password
@@ -276,7 +281,7 @@ app.get('/dashboard',authenticateToken, async (request, response) => {
       'Networking',
       'Configuration'
     ]
-    console.log("THE SESSION COOKIES!!!")
+    //console.log("THE SESSION COOKIES!!!")
   
     // const loggedInUser = request.user
     // console.log(loggedInUser)
@@ -377,8 +382,8 @@ app.get('/sessions/:session_id',authenticateToken, async (request,response) => {
 
 app.get('/exportsession/:session_id',authenticateToken, async (request, response) => {
   const session_id = request.params.session_id
-  console.log("SESSION EX",session_id)
-  console.log(session_id)
+  //console.log("SESSION EX",session_id)
+  //console.log(session_id)
   try{
     const session = await Session.findOne({ session_id})
     .populate({path: 'clients', model: Client,}).exec()
@@ -650,11 +655,6 @@ app.post('/connect',authenticateToken,
     }
     })
 
-    //management Routes
-    // app.get('/userManagement', authenticateToken, isAdmin, async (req, res) => {
-    //   const users = await User.find({})
-    //   res.render('management/users', { users })
-    // })
 
      app.get('/userManagement',authenticateToken, isAdmin, async (request, response) => {
       const users = await User.find({})

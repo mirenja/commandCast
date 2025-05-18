@@ -47,8 +47,13 @@
     "nodemon": "^3.1.10",
     "postcss": "^8.5.3",
     "postcss-cli": "^11.0.1",
-    "superagent": "^10.2.0",
-    "supertest": "^7.1.0",
+    "superagent": "^10.2.1",
+    "supertest": "^7.1.1",
     "tailwindcss": "^4.1.4"
+  },
+   "jest": {
+    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
+    "testEnvironment": "node",
+    "transform": {}
   }
 }
