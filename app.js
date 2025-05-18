@@ -466,8 +466,13 @@ app.post('/newclient',
         response.redirect('/dashboard?message=Device+added+successfully')
     }catch(error){
       console.log("device error")
-        console.error(error)
-        response.redirect('/dashboard?message='+error)
+      console.log(error)
+      if (Array.isArray(error.errors)) {
+        const firstError = error.errors[0].msg
+        return response.redirect(`/dashboard?message=${encodeURIComponent(firstError)}`)
+      }
+      return response.redirect(`/dashboard?message=${encodeURIComponent('Unexpected error occurred')}`)
+
     }
 })
 
