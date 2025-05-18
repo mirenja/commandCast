@@ -9,7 +9,7 @@ import { PORT,SSH_PASSWORD,username} from './config/app.js'
 import jwt from 'jsonwebtoken'
 import {generateAccessToken,validateUser} from './services/acessToken.js'
 import { authenticateToken} from './middlewares/authenticateToken.js'
-import { generatedSalt,hashPassword } from './services/passwordHashing.js'
+import { generatedSalt,hashPassword,comparePassword } from './services/passwordHashing.js'
 import crypto from 'crypto'
 import {fileAndSystemCommands} from './services/commandwhitelist.js'
 import validator from 'validator'
@@ -214,7 +214,7 @@ app.get('/passwordReset', async (request, response) => {
 
 app.post('/passwordReset',
   body('email').isString().isLength({ max: 50 }).isEmail().escape(),
-  body('password').isString().isLength({ min:10, max: 20 }).matches(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{10,20}$/).withMessage('Password must be atleast 10 characters long').escape(),
+  body('password').isString().isLength({ min:10, max: 20 }).withMessage("invalid password").matches(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{10,20}$/).withMessage('Password must be atleast 10 characters long').escape(),
   body('confirm_password').isString().isLength({  min:10, max: 20  }).custom((value, { req }) => {
     if (value !== req.body.password) { 
       throw new Error('Passwords do not match')}
@@ -229,7 +229,7 @@ app.post('/passwordReset',
       const email = request.body.email
       if (confirm_password !== password){
         const message= "password does not match"
-        response.redirect('/signup='+encodeURIComponent(message))
+        response.redirect('/passwordReset?message='+encodeURIComponent(message))
       }
 
       const salt = await generatedSalt()
@@ -248,9 +248,9 @@ app.post('/passwordReset',
         let firstMessage = messages[0]
         if (firstMessage == 'Invalid value'){
           firstMessage = "invalid Email"
-          return response.redirect('/passwordReset?message=' + encodeURIComponent(firstMessage))
+          return response.redirect('/passwordReset?message='+encodeURIComponent(firstMessage))
         }
-        return response.redirect('/passwordReset?message=' + encodeURIComponent(firstMessage))
+        return response.redirect('/passwordReset?message='+encodeURIComponent(firstMessage))
   
       }
 
