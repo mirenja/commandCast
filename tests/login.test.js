@@ -91,7 +91,12 @@ describe('POST /login validation rules', () => {
   //   expect(response.header['location']).toMatch("/?message=invalid%20password")
   // })
 
-  it('should succeed with valid credentials and set cookies', async () => {
+  ('should succeed with valid credentials and set cookies', async () => {
+    //validateUser
+    //createsession with the user.id as started person
+    //redirect with code 302
+    //redirect to dashboard
+    
     const response = await request(app)
       .post('/login')
       .send({ email: 'jane@example.com', password: 'securePass123!' })

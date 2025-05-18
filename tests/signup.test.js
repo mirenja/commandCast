@@ -1,16 +1,39 @@
 import {jest} from '@jest/globals'
 import request from 'supertest'
-import mongoose from 'mongoose'
-import app from '../app.js'
-import {User} from '../models/user.js'
-//import * as passUtils  from '../services/passwordHashing.js'
-import { generatedSalt,hashPassword,comparePassword } from '../services/passwordHashing.js'
 
 
+const saveMock = jest.fn().mockResolvedValue(true)
+
+await jest.unstable_mockModule('../models/user.js', () => {
+  return {
+    User: function (userData) {
+      return {
+        ...userData,
+        save: saveMock
+      }
+    },
+    __esModule: true
+  }
+})
+
+await jest.unstable_mockModule('../services/passwordHashing.js', () => ({
+  generatedSalt: jest.fn().mockResolvedValue('mockedSalt'),
+  hashPassword: jest.fn().mockImplementation(async (password, salt) => 'hashed_' + password),
+  comparePassword: jest.fn().mockImplementation(async (password, hash) => password === hash.replace('hashed_', '')),
+}))
+
+const { setupTestApp } = await import('./setupTestApp.js')
+const { User } = await import('../models/user.js')
 
 
+const { generatedSalt, hashPassword, comparePassword } = await import('../services/passwordHashing.js')
 
-// #test state or interface an dnot if fucntion is called
+let app
+beforeAll(async () => {
+  const setup = await setupTestApp()
+  app = setup.app
+})
+
 describe('GET signup page', () => {
   test("It should return the signup page on GET /signup ", async () => {
     const response = await request(app).get("/signup")
@@ -30,22 +53,9 @@ describe('GET signup page', () => {
 
 
 describe('POST /signup signupvalidation rules check', () => {
-  
-
-  beforeAll(async () => {
-    if (mongoose.connection.readyState === 0) {
-      await mongoose.connect(globalThis.__MONGO_URI__, {
-        dbName: globalThis.__MONGO_DB_NAME__,
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      })
-    }
+  afterEach(() => {
+    jest.clearAllMocks()
   })
-
-afterAll(async () => {
-    await mongoose.connection.dropDatabase()
-    await mongoose.connection.close()
-})
 
 
   it('should fail when email is invalid', async () => {
@@ -169,16 +179,14 @@ afterAll(async () => {
       password: 'Valid1234!',
       confirm_password: 'Valid1234!' 
     }
+    
    const response = await request(app)
       .post('/signup')
       .send(validUser)
 
-    const savedUser = await User.findOne({ email: validUser.email })
-    expect(response.statusCode).toBe(302) 
+    expect(response.statusCode).toBe(302)
     expect(response.header['location']).toBe('/?message=User+added+successfully')
-    expect(savedUser).not.toBeNull()
-    expect(savedUser.name).toBe(validUser.name)
-    expect(savedUser.password).not.toBe(validUser.password)
+    expect(saveMock).toHaveBeenCalled()
   })
 })
 

@@ -5,7 +5,7 @@ import * as Sentry from "@sentry/node"
 
 import cookieParser from 'cookie-parser'
 import { PORT,SSH_PASSWORD,username} from './config/app.js'
-import './config/database.js'
+
 import jwt from 'jsonwebtoken'
 import {generateAccessToken,validateUser} from './services/acessToken.js'
 import { authenticateToken} from './middlewares/authenticateToken.js'
@@ -13,11 +13,6 @@ import { generatedSalt,hashPassword } from './services/passwordHashing.js'
 import crypto from 'crypto'
 import {fileAndSystemCommands} from './services/commandwhitelist.js'
 import validator from 'validator'
-
-
-
-
-
 
 
 import { logger } from './middlewares/logger.js'
@@ -41,7 +36,7 @@ import { userInfo } from 'os'
 import { body, validationResult } from 'express-validator'
 
 
-
+export default function(database){
 const app =express()
 
 app.set('view engine', 'ejs')
@@ -61,8 +56,8 @@ app.use(logger)
 
 
 
-export const connections = new Map()
-export const onlineClients = new Map()
+const connections = new Map()
+const onlineClients = new Map()
 
 app.get('/', async (request, response) => {
   response.render('index')
@@ -717,6 +712,6 @@ app.post('/connect',authenticateToken,
 Sentry.setupExpressErrorHandler(app)
 
 
+return app
 
-
-export default app
+}
