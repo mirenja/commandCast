@@ -11,8 +11,7 @@ await jest.unstable_mockModule('../models/user.js', () => {
         ...userData,
         save: saveMock
       }
-    },
-    __esModule: true
+    }
   }
 })
 

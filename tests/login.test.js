@@ -1,115 +1,125 @@
 import { jest } from '@jest/globals'
-import { MongoMemoryServer } from 'mongodb-memory-server'
-import mongoose from 'mongoose'
+import request from 'supertest'
 
 
+const validateUserMock = jest.fn()
+const generateAccessTokenMock = jest.fn()
 
-// jest.unstable_mockModule('../models/session.js', () => {
-//   const MockSession = jest.fn().mockImplementation(function () {
-//     this.save = jest.fn().mockResolvedValue(true)
-//     this.session_id = 'mockedSessionId'
-//     this._id = 'mockedSessionObjectId'
-//     this.createdAt = new Date("2025-05-17T08:32:46.886Z")
-//   })
+const saveMock = jest.fn().mockResolvedValue(true)
 
-//   return {
-//     Session: MockSession
-//   }
-// })
+await jest.unstable_mockModule('../models/session.js', () => {
+  return {
+    Session: function(sessionData) {
+      return {
+        ...sessionData,
+        save: saveMock,
+        id: 'mocked-session-id',
+        createdAt: new Date('2025-05-18T10:00:00Z'),
+      }
+    }
+  }
+})
+
+const getBerlinTimeMock = jest.fn().mockImplementation((date) => ({
+  date: '2025-05-18',
+  time: '12:00:00'
+}))
+
+import crypto from 'crypto'
+jest.spyOn(crypto, 'randomBytes').mockReturnValue(Buffer.alloc(16, 0))
+
 
 jest.unstable_mockModule('bcrypt', () => ({
   compare: jest.fn().mockResolvedValue(true)
 }))
 
 jest.unstable_mockModule('../services/acessToken.js', () => ({
-  generateAccessToken: jest.fn().mockResolvedValue('fake.jwt.token'),
-  validateUser: jest.fn().mockResolvedValue({ _id: '123456', email: 'jane@example.com' }),
+  validateUser: validateUserMock,
+  generateAccessToken: generateAccessTokenMock,
 }))
 
 
-let request
+jest.unstable_mockModule('../services/berlinTime.js', () => ({
+  getBerlinTime: getBerlinTimeMock
+}))
+
+
+const { setupTestApp } = await import('./setupTestApp.js')
 let app
-let validateUser
-let generateAccessToken
-
 beforeAll(async () => {
-  const supertestModule = await import('supertest')
-  request = supertestModule.default
-
-  const appModule = await import('../app.js')
-  app = appModule.default
-
-  const accessTokenModule = await import('../services/acessToken.js')
-  validateUser = accessTokenModule.validateUser
-  generateAccessToken = accessTokenModule.generateAccessToken
-
-  if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(globalThis.__MONGO_URI__, {
-      dbName: globalThis.__MONGO_DB_NAME__,
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
-  }
+  const setup = await setupTestApp()
+  app = setup.app
 })
 
-beforeEach(() => {
-  jest.clearAllMocks()
-})
-
-afterAll(async () => {
-  await mongoose.connection.dropDatabase()
-  await mongoose.connection.close()
-})
 
 describe('POST /login validation rules', () => {
-  beforeEach(() => {
+  afterEach(() => {
     jest.clearAllMocks()
   })
 
-  // it('should fail when email is invalid', async () => {
-  //   const response = await request(app)
-  //     .post('/login')
-  //     .send({
-  //       email: 'invalidemail',
-  //       password: 'Valid123!'
-  //     })
-
-  //   expect(response.statusCode).toBe(302)
-  //   expect(response.header['location']).toMatch("/?message=invalid%20Email")
-  // })
-
-  // it('should fail when password is too long', async () => {
-  //   const longPassword = 'a'.repeat(100)
-  //   const response = await request(app)
-  //     .post('/login')
-  //     .send({
-  //       email: 'jane@example.com',
-  //       password: longPassword
-  //     })
-
-  //   expect(response.statusCode).toBe(302)
-  //   expect(response.header['location']).toMatch("/?message=invalid%20password")
-  // })
-
-  ('should succeed with valid credentials and set cookies', async () => {
-    //validateUser
-    //createsession with the user.id as started person
-    //redirect with code 302
-    //redirect to dashboard
-    
+  it('should fail when email is invalid', async () => {
     const response = await request(app)
       .post('/login')
-      .send({ email: 'jane@example.com', password: 'securePass123!' })
+      .send({
+        email: 'invalidemail',
+        password: 'Valid12345!'
+      })
 
     expect(response.statusCode).toBe(302)
-    expect(response.headers).toHaveProperty('set-cookie')
+    expect(response.header['location']).toMatch("/?message=invalid%20Email")
+    expect(validateUserMock).not.toHaveBeenCalled()
 
-    const cookies = response.headers['set-cookie']
+  })
 
-    expect(cookies.find(c => c.startsWith('token='))).toBeDefined()
-    expect(cookies.find(c => c.startsWith('sessionCookie='))).toBeDefined()
-    expect(response.header['location']).toBe('/dashboard')
+  it('should fail when password is too long', async () => {
+    const longPassword = 'a'.repeat(100)
+    const response = await request(app)
+      .post('/login')
+      .send({
+        email: 'jane@example.com',
+        password: longPassword
+      })
+
+    expect(response.statusCode).toBe(302)
+    expect(response.header['location']).toMatch("/?message=invalid%20password")
+  })
+
+    it('should login successfully with valid credentials and set cookies', async () => {
+    validateUserMock.mockResolvedValueOnce({ _id: '47e84d2ca5ed' })
+    generateAccessTokenMock.mockResolvedValueOnce('mockedtoken')
+
+    const res = await request(app)
+      .post('/login')
+      .send({ email: 'jane@example.com', password: 'ValidPass1234!' })
+
+    expect(res.status).toBe(302)
+    expect(res.header['location']).toBe('/dashboard')
+    expect(validateUserMock).toHaveBeenCalledWith('jane@example.com', 'ValidPass1234!')
+    expect(generateAccessTokenMock).toHaveBeenCalledWith({ userId: '47e84d2ca5ed' })
+
+    const cookies = res.headers['set-cookie']
+    expect(cookies).toBeDefined()
+    expect(cookies.length).toBeGreaterThanOrEqual(2)
+
+    const tokenCookie = cookies.find(c => c.startsWith('token='))
+    expect(tokenCookie).toBeDefined()
+    expect(tokenCookie).toMatch(/HttpOnly/)
+    expect(tokenCookie).toMatch(/Secure/)
+    expect(tokenCookie).toMatch(/SameSite=Strict/)
+    expect(tokenCookie).toMatch(/Max-Age=3600/)
+
+    
+    const sessionCookie = cookies.find(c => c.startsWith('sessionCookie='))
+    expect(sessionCookie).toBeDefined()
+    expect(sessionCookie).toMatch(/HttpOnly/)
+    expect(sessionCookie).toMatch(/Secure/)
+    expect(sessionCookie).toMatch(/SameSite=Strict/)
+    expect(sessionCookie).toMatch(/Max-Age=3600/)
   })
 })
+
+
+
+
 
 
