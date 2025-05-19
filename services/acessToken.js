@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken'
+import * as jwt from 'jsonwebtoken'
 import { TOKEN_SECRET } from '../config/app.js'
 import { User} from '../models/user.js'
 import { comparePassword } from './passwordHashing.js'
