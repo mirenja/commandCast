@@ -122,7 +122,7 @@ describe('GET /dashboard pagination', () => {
 
     //  number of client cards rendered 
     const clientCardsCount = (res.text.match(/class="[^"]*\bclient-card\b[^"]*"/g) || []).length
-    console.log("CLIENT CARD COUNT",res.text)
+    // console.log("CLIENT CARD COUNT",res.text)
     expect(clientCardsCount).toBe(2)
 
     // Check online and offline count t

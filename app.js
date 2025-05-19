@@ -59,6 +59,9 @@ app.use(logger)
 const connections = new Map()
 const onlineClients = new Map()
 
+app.connections = connections
+app.onlineClients = onlineClients
+
 app.get('/', async (request, response) => {
   response.render('index')
 })
@@ -75,6 +78,7 @@ app.post('/login',
 
 
       // console.log('user email:',email)
+      console.log('Login attempt:', request.body)
 
       const validatedUser = await validateUser(email,password)
       console.log("validated user is:",validatedUser)
@@ -534,6 +538,7 @@ app.post('/connect',authenticateToken,
   async (request,response) => {
     const ip_address = request.body.ip_address//when we put auntentication is should use the logged in user
     const _id = request.body._id
+    console.log('Cookies received:', request.cookies)
     const sessionCookie = request.cookies.sessionCookie
     console.log("Session cookie in connect",sessionCookie)
     console.log('Received request to connect to:', {ip_address })
@@ -554,17 +559,22 @@ app.post('/connect',authenticateToken,
       await Client.findOneAndUpdate({ _id }, { status: 'online' },{ new: true })
       onlineClients.set( _id,{ status: 'online' })
       await addClientToSession(sessionCookie.id, _id)
+      console.log('Calling addClientToSession with:', _id)
       // if (!updatedClient) {
       //   console.log(`No client found with _id: ${_id} ${updatedSession}`)
       // } else {
       //   console.log(`Client ${_id} ${updatedSession} updated to online`)
       // }
+      // console.log("response",response)
+      console.log('Parsed Cookies:', request.cookies)
+      console.log('Raw Cookie Header:', request.headers.cookie);
+
       response.send({ success: true, message: 'Connected successfully' })
 
     } catch (error) {
         console.log("server ddnt connect -------------")
         console.log(error)
-      response.send({ error })
+      response.status(500).json({ error: error.message || error.toString() })
     }
   })
 

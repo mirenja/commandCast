@@ -1,4 +1,4 @@
-import * as jwt from 'jsonwebtoken'
+import jwt from 'jsonwebtoken'
 import { TOKEN_SECRET } from '../config/app.js'
 import { User} from '../models/user.js'
 import { comparePassword } from './passwordHashing.js'
@@ -10,8 +10,9 @@ export function  generateAccessToken(user_id){
 }
 
 export async  function  validateUser(email,password){
+    console.log("validating the user...")
     const user = await User.findOne({email:email}).exec()
-    // console.log('user found by email:',user._id)
+     console.log('Found user?', !!user)
     //console.log('validate use rfunction returns:',user)
 
     if (!user){
