@@ -1,0 +1,4 @@
+
+> commandcast@1.0.0 test
+> node --experimental-vm-modules node_modules/.bin/jest --detectOpenHandles --forceExit
+

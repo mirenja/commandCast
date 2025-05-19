@@ -5,19 +5,14 @@ import * as Sentry from "@sentry/node"
 
 import cookieParser from 'cookie-parser'
 import { PORT,SSH_PASSWORD,username} from './config/app.js'
-import './config/database.js'
+
 import jwt from 'jsonwebtoken'
 import {generateAccessToken,validateUser} from './services/acessToken.js'
 import { authenticateToken} from './middlewares/authenticateToken.js'
-import { generatedSalt,hashPassword } from './services/passwordHashing.js'
+import { generatedSalt,hashPassword,comparePassword } from './services/passwordHashing.js'
 import crypto from 'crypto'
 import {fileAndSystemCommands} from './services/commandwhitelist.js'
 import validator from 'validator'
-
-
-
-
-
 
 
 import { logger } from './middlewares/logger.js'
@@ -41,7 +36,7 @@ import { userInfo } from 'os'
 import { body, validationResult } from 'express-validator'
 
 
-
+export default function(database){
 const app =express()
 
 app.set('view engine', 'ejs')
@@ -61,8 +56,11 @@ app.use(logger)
 
 
 
-export const connections = new Map()
-export const onlineClients = new Map()
+const connections = new Map()
+const onlineClients = new Map()
+
+app.connections = connections
+app.onlineClients = onlineClients
 
 app.get('/', async (request, response) => {
   response.render('index')
@@ -73,25 +71,28 @@ app.post('/login',
   body('password').isString().isLength({ max: 20 }).withMessage("invalid password").trim().escape(),
    async(request,response) => {
   try{ 
-      //console.log('BODY:', request.body)
+      console.log('BODY:', request.body)
       validationResult(request).throw()
       const { email, password } = request.body
       // console.log(email, password)
 
 
       // console.log('user email:',email)
+      console.log('Login attempt:', request.body)
 
       const validatedUser = await validateUser(email,password)
-      // console.log("validated user is:",validatedUser)
+      console.log("validated user is:",validatedUser)
 
       
       const token = await generateAccessToken({ userId: validatedUser._id })
+       console.log("token",token)
       const session = new Session({
         session_id:crypto.randomBytes(8).toString('hex'),
         started_by: validatedUser._id
       })
-      // console.log("session id for crypto",session.session_id)
+      console.log("session id for crypto",session.session_id)
       await session.save()
+      console.log("we have now saved the session")
 
 
       response.cookie('token',token,{
@@ -125,7 +126,8 @@ app.post('/login',
 
       // console.log("the token is",token)
       response.redirect('/dashboard')
-      // console.log("THE RESPONSE HEADER!!!")
+      console.log("THE RESPONSE HEADER!!!")
+      // console.log(response)
       // console.log("Status Code:", response.statusCode)
       // console.log(response.getHeaders())
 
@@ -177,6 +179,7 @@ app.get('/signup', async (request, response) => {
 app.post('/signup',signupValidationRules, validate,async(request,response) => {
   try{ 
 
+    // console.log('Inside /signup route')
     const salt = await generatedSalt()
     const hashedPassword = await hashPassword(request.body.password, salt)
 
@@ -188,8 +191,9 @@ app.post('/signup',signupValidationRules, validate,async(request,response) => {
     })
 
     await newUser.save()
+    // console.log('User saved, about to redirect')
 
-    console.log("user added!!")
+    // console.log("user added!!")
     response.redirect('/?message=User+added+successfully')
 
   }catch(error){
@@ -214,7 +218,7 @@ app.get('/passwordReset', async (request, response) => {
 
 app.post('/passwordReset',
   body('email').isString().isLength({ max: 50 }).isEmail().escape(),
-  body('password').isString().isLength({ min:10, max: 20 }).matches(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{10,20}$/).withMessage('Password must be atleast 10 characters long').escape(),
+  body('password').isString().isLength({ min:10, max: 20 }).withMessage("invalid password").matches(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{10,20}$/).withMessage('Password must be atleast 10 characters long').escape(),
   body('confirm_password').isString().isLength({  min:10, max: 20  }).custom((value, { req }) => {
     if (value !== req.body.password) { 
       throw new Error('Passwords do not match')}
@@ -222,14 +226,14 @@ app.post('/passwordReset',
   async(request,response) => {
   try{ 
       validationResult(request).throw()
-      console.log('BODY:', request.body)
+      //console.log('BODY:', request.body)
 
       const password = request.body.password
       const confirm_password = request.body.confirm_password
       const email = request.body.email
       if (confirm_password !== password){
         const message= "password does not match"
-        response.redirect('/signup='+encodeURIComponent(message))
+        response.redirect('/passwordReset?message='+encodeURIComponent(message))
       }
 
       const salt = await generatedSalt()
@@ -248,9 +252,9 @@ app.post('/passwordReset',
         let firstMessage = messages[0]
         if (firstMessage == 'Invalid value'){
           firstMessage = "invalid Email"
-          return response.redirect('/passwordReset?message=' + encodeURIComponent(firstMessage))
+          return response.redirect('/passwordReset?message='+encodeURIComponent(firstMessage))
         }
-        return response.redirect('/passwordReset?message=' + encodeURIComponent(firstMessage))
+        return response.redirect('/passwordReset?message='+encodeURIComponent(firstMessage))
   
       }
 
@@ -276,7 +280,7 @@ app.get('/dashboard',authenticateToken, async (request, response) => {
       'Networking',
       'Configuration'
     ]
-    console.log("THE SESSION COOKIES!!!")
+    //console.log("THE SESSION COOKIES!!!")
   
     // const loggedInUser = request.user
     // console.log(loggedInUser)
@@ -377,8 +381,8 @@ app.get('/sessions/:session_id',authenticateToken, async (request,response) => {
 
 app.get('/exportsession/:session_id',authenticateToken, async (request, response) => {
   const session_id = request.params.session_id
-  console.log("SESSION EX",session_id)
-  console.log(session_id)
+  //console.log("SESSION EX",session_id)
+  //console.log(session_id)
   try{
     const session = await Session.findOne({ session_id})
     .populate({path: 'clients', model: Client,}).exec()
@@ -466,8 +470,13 @@ app.post('/newclient',
         response.redirect('/dashboard?message=Device+added+successfully')
     }catch(error){
       console.log("device error")
-        console.error(error)
-        response.redirect('/dashboard?message='+error)
+      console.log(error)
+      if (Array.isArray(error.errors)) {
+        const firstError = error.errors[0].msg
+        return response.redirect(`/dashboard?message=${encodeURIComponent(firstError)}`)
+      }
+      return response.redirect(`/dashboard?message=${encodeURIComponent('Unexpected error occurred')}`)
+
     }
 })
 
@@ -529,6 +538,7 @@ app.post('/connect',authenticateToken,
   async (request,response) => {
     const ip_address = request.body.ip_address//when we put auntentication is should use the logged in user
     const _id = request.body._id
+    console.log('Cookies received:', request.cookies)
     const sessionCookie = request.cookies.sessionCookie
     console.log("Session cookie in connect",sessionCookie)
     console.log('Received request to connect to:', {ip_address })
@@ -549,17 +559,22 @@ app.post('/connect',authenticateToken,
       await Client.findOneAndUpdate({ _id }, { status: 'online' },{ new: true })
       onlineClients.set( _id,{ status: 'online' })
       await addClientToSession(sessionCookie.id, _id)
+      console.log('Calling addClientToSession with:', _id)
       // if (!updatedClient) {
       //   console.log(`No client found with _id: ${_id} ${updatedSession}`)
       // } else {
       //   console.log(`Client ${_id} ${updatedSession} updated to online`)
       // }
+      // console.log("response",response)
+      console.log('Parsed Cookies:', request.cookies)
+      console.log('Raw Cookie Header:', request.headers.cookie);
+
       response.send({ success: true, message: 'Connected successfully' })
 
     } catch (error) {
         console.log("server ddnt connect -------------")
         console.log(error)
-      response.send({ error })
+      response.status(500).json({ error: error.message || error.toString() })
     }
   })
 
@@ -650,11 +665,6 @@ app.post('/connect',authenticateToken,
     }
     })
 
-    //management Routes
-    // app.get('/userManagement', authenticateToken, isAdmin, async (req, res) => {
-    //   const users = await User.find({})
-    //   res.render('management/users', { users })
-    // })
 
      app.get('/userManagement',authenticateToken, isAdmin, async (request, response) => {
       const users = await User.find({})
@@ -717,6 +727,6 @@ app.post('/connect',authenticateToken,
 Sentry.setupExpressErrorHandler(app)
 
 
+return app
 
-
-export default app
+}

@@ -1,8 +1,9 @@
-import bcrypt from 'bcrypt'
+import * as bcrypt from 'bcrypt'
 
 const saltRounds = 12
 
 export async function generatedSalt(){
+    // console.log("bcrypt looks like this,",bcrypt)
     try{
         const salt = await bcrypt.genSalt(saltRounds)
         return salt
