@@ -1,15 +1,18 @@
-name: Continuous Deployment (CD)
+name: Continuous Deployment (CD) - Cloud RUN
 
 on:
-    pull_request:
-        types:
-            - closed
+    push:
         branches:
             - main
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: ${{ secrets.GCP_REGION }}
+  REPO_NAME: ${{ secrets.ARTIFACT_REPO_NAME }}
+  SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
         
 jobs:
-  build:
-    # Allow the job to fetch a GitHub ID token
+  deploy:
     permissions:
       id-token: write
       contents: read
@@ -17,21 +20,62 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - id: 'auth'
-        name: 'Authenticate to Google Cloud'
+      - name: Set IMAGE_NAME
+        id: image
+        run: echo "image_name=app:${{ github.ref_name }}-${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: 'Authenticate to Google Cloud'
+        id: 'auth'
         uses: 'google-github-actions/auth@v1'
         with:
           create_credentials_file: true
-          workload_identity_provider: 'projects/227235535684/locations/global/workloadIdentityPools/coreassesment/providers/github'
-          service_account: 'jillkenyani@gmail.com'
-      - id: 'deploy'
-        uses: 'google-github-actions/deploy-appengine@v2'
-      - id: 'test'
-        run: 'curl "${{ steps.deploy.outputs.version_url }}"'
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker $REGION-docker.pkg.dev
+
+      - name: Build Docker image
+        run: docker build --platform=linux/amd64 -t $REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/${{ steps.image.outputs.image_name }} .
+
+      - name: Push Docker image
+        run: docker push $REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/${{ steps.image.outputs.image_name }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+
+      - name: Write backend config
+        run: |
+          echo -e "organization = \"${{ secrets.TFC_ORG }}\"\nworkspaces {\n  name = \"${{ secrets.TFC_WORKSPACE }}\"\n}" > terraform-gcp-cloudrun/backend.hcl
+
+      - name: Initialize Terraform
+        run: terraform init -input=false -backend-config=backend.hcl
+        working-directory: ./terraform-gcp-cloudrun
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ./terraform-gcp-cloudrun
+
+      - name: Terraform Plan
+        run: terraform plan -input=false var="project_id=$PROJECT_ID" var="region=$REGION" var="artifact_registry_repo_name=$REPO_NAME" var="service_name=$SERVICE_NAME" var="image_name=${{ steps.image.outputs.image_name }}" var="container_port=80" var="create_repo=false"
+        working-directory: ./terraform-gcp-cloudrun
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve var="project_id=$PROJECT_ID" var="region=$REGION" var="artifact_registry_repo_name=$REPO_NAME" var="service_name=$SERVICE_NAME" var="image_name=${{ steps.image.outputs.image_name }}" var="container_port=80" var="create_repo=false"
+        working-directory: ./terraform-gcp-cloudrun
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
 
 
+      
 
 
 

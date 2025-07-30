@@ -2,15 +2,17 @@ name: Express APP  CI
 
 on:
     push:
-      branches-ignore:
-        - main
+      branches-ignore: [main] 
+    pull_request:
+      branches: [main] 
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
@@ -23,11 +25,8 @@ jobs:
         run: npm run build:css
       - run: npm run build --if-present
       - run: npm test
-      - name: Install GitHub CLI
-        run: sudo apt-get install gh -y
-      - name: Create Pull Request
-        run: gh pr create --title "Auto PR from ${{ github.ref_name }}" --body "Auto-created PR" --base main --head ${{ github.ref_name }}
-        env:
-            GH_TOKEN: ${{ secrets.WORKFLOWS }}
+      - name: Test Docker build
+        run: docker build --platform=linux/amd64 -t test-image .
+    
 
         
