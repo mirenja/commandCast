@@ -85,7 +85,7 @@ app.post('/login',
 
       
       const token = await generateAccessToken({ userId: validatedUser._id })
-       console.log("token",token)
+      console.log("token",token)
       const session = new Session({
         session_id:crypto.randomBytes(8).toString('hex'),
         started_by: validatedUser._id

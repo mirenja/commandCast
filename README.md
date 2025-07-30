@@ -30,6 +30,7 @@ it implements user authentication, authorisation, sessioninformation tracking, c
 - create a .env file and add
  - MONGODB_URI=<add your URI>
  - PORT = 3000
+ -TOKEN_SECRET=
 - seed the database
     - npm run seed
 
