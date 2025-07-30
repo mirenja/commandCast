@@ -28,6 +28,7 @@
     "express-validator": "^7.2.1",
     "jest-puppeteer": "^11.0.0",
     "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.18.0",
     "mongoose": "^8.13.2",
     "puppeteer": "^24.8.2",
     "socket.io": "^4.8.1",
