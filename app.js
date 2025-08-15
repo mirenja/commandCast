@@ -1,15 +1,16 @@
 import "./instrument.mjs"
 import express from 'express'
 import * as Sentry from "@sentry/node"
+import pkg from 'express-openid-connect'
 
 
 import cookieParser from 'cookie-parser'
 import { PORT,SSH_PASSWORD,username} from './config/app.js'
 
 import jwt from 'jsonwebtoken'
-import {generateAccessToken,validateUser} from './services/acessToken.js'
+// import {generateAccessToken,validateUser} from './services/acessToken.js'
 import { authenticateToken} from './middlewares/authenticateToken.js'
-import { generatedSalt,hashPassword,comparePassword } from './services/passwordHashing.js'
+// import { generatedSalt,hashPassword,comparePassword } from './services/passwordHashing.js'
 import crypto from 'crypto'
 import {fileAndSystemCommands} from './services/commandwhitelist.js'
 import validator from 'validator'
@@ -20,10 +21,11 @@ import { isAdmin } from "./middlewares/isAdmin.js"
 import { signupValidationRules,validate } from './middlewares/signUpValidate.js'
 
 
+
 import {User} from './models/user.js'
 import {Session} from './models/session.js'
 
-import {CommandResponse} from './models/commandResponse.js'
+import {CommandResponse} from './models/commandresponse.js'
 import {Command} from './models/command.js'
 import {Client} from './models/client.js'
 import {AuditLog} from './models/auditLog.js'
@@ -34,15 +36,18 @@ import { getBerlinTime } from './services/berlinTime.js'
 import { addClientToSession,removeClientToSession } from './services/clientToSession.js'
 import { userInfo } from 'os'
 import { body, validationResult } from 'express-validator'
+import { config } from './services/auth0.js'
 
 
 export default function(database){
 const app =express()
+const { auth,requiresAuth } = pkg
 
 app.set('view engine', 'ejs')
 
 app.use(express.static('public'))
 app.use(cookieParser())
+
 
 
 // to read the form requests body
@@ -54,6 +59,8 @@ app.use(cookieParser())
 app.use(setCurrentUser)
 app.use(logger)
 
+app.use(auth(config))
+
 
 
 const connections = new Map()
@@ -62,92 +69,9 @@ const onlineClients = new Map()
 app.connections = connections
 app.onlineClients = onlineClients
 
-app.get('/', async (request, response) => {
-  response.render('index')
-})
-
-app.post('/login',
-  body('email').isString().isLength({ max: 50 }).isEmail().withMessage("invalid Email").trim().escape(),
-  body('password').isString().isLength({ max: 20 }).withMessage("invalid password").trim().escape(),
-   async(request,response) => {
-  try{ 
-      console.log('BODY:', request.body)
-      validationResult(request).throw()
-      const { email, password } = request.body
-      // console.log(email, password)
 
 
-      // console.log('user email:',email)
-      console.log('Login attempt:', request.body)
-
-      const validatedUser = await validateUser(email,password)
-      console.log("validated user is:",validatedUser)
-
-      
-      const token = await generateAccessToken({ userId: validatedUser._id })
-      console.log("token",token)
-      const session = new Session({
-        session_id:crypto.randomBytes(8).toString('hex'),
-        started_by: validatedUser._id
-      })
-      console.log("session id for crypto",session.session_id)
-      await session.save()
-      console.log("we have now saved the session")
-
-
-      response.cookie('token',token,{
-        httpOnly: true,
-        secure: true,
-        sameSite: 'Strict',
-        maxAge: 3600000 
-        
-      })
-      const createdAt = session.createdAt
-      const date = getBerlinTime(createdAt)
-      const time = getBerlinTime(createdAt)
-
-      // console.log("the date is now",date)
-      // console.log("the date is now",time)
-
-      const sessionCookie = {
-        id:session.id,
-        session_id:session.session_id,
-        date:date.date,
-        time:time.time
-
-      }
-
-      response.cookie('sessionCookie', sessionCookie, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'Strict',
-        maxAge: 3600000,
-      })
-
-      // console.log("the token is",token)
-      response.redirect('/dashboard')
-      console.log("THE RESPONSE HEADER!!!")
-      // console.log(response)
-      // console.log("Status Code:", response.statusCode)
-      // console.log(response.getHeaders())
-
-      
-      
-
-  }catch(error){
-    if (Array.isArray(error.errors)) {
-      const messages = error.errors.map(err => err.msg);
-      let firstMessage = messages[0];
-      response.redirect('/?message=' + encodeURIComponent(firstMessage));
-    } else {
-      response.redirect('/?message=' + encodeURIComponent('An unexpected error occurred'));
-    }  
-}
-      
-  }
-)
-
-app.post('/logout', async(request,response) => {
+app.post('/logout', async(req,res) => {
   try{
     for (const [_id, conn] of connections.entries()){
       try{
@@ -163,111 +87,50 @@ app.post('/logout', async(request,response) => {
     // await Client.updateMany({}, { status: 'offline' })
     connections.clear()
     onlineClients.clear()
-    response.clearCookie('token')
-    response.clearCookie('sessionCookie')
+    res.clearCookie('token')
+    res.clearCookie('sessionCookie')
+    res.oidc.logout({ returnTo: '/login' });
 
-    response.redirect('/')
   }catch(error){
-    response.redirect('/?message='+error)
+    res.redirect('/login?message='+error)
   }})
 
-app.get('/signup', async (request, response) => {
-  response.render('signup')
-})
+app.get('/',requiresAuth(), async (req, res) => {
+    let sessionCookie = req.cookies.sessionCookie
+    let user
 
+    if (!sessionCookie) {
+    // Create a new session 
+    user = await User.findOne({ email: req.oidc.user.email});
 
-app.post('/signup',signupValidationRules, validate,async(request,response) => {
-  try{ 
-
-    // console.log('Inside /signup route')
-    const salt = await generatedSalt()
-    const hashedPassword = await hashPassword(request.body.password, salt)
-
-    const newUser = new User({
-        id: uuidv4(),
-        name:request.body.name,
-        email:request.body.email,
-        password:hashedPassword
-    })
-
-    await newUser.save()
-    // console.log('User saved, about to redirect')
-
-    // console.log("user added!!")
-    response.redirect('/?message=User+added+successfully')
-
-  }catch(error){
-    if (Array.isArray(error.errors)) {
-      console.log("All validation errors:")
-      console.log(error.errors)
-      const messages = error.errors.map(err => err.msg)
-      let firstMessage = messages[0]
-      if (firstMessage == 'Invalid value'){
-        firstMessage = "invalid Email"
-        return response.redirect('/signup?message=' + encodeURIComponent(firstMessage))
-      }
-      return response.redirect('/signup?message=' + encodeURIComponent(firstMessage))
-
+    if (!user) {
+    user = await User.create({
+      id: uuidv4(),
+      auth0_user_id: req.oidc.user.sub,
+      email: req.oidc.user.email,
+      name: req.oidc.user.name,
+      isAdmin: false});
     }
-  }})
 
-app.get('/passwordReset', async (request, response) => {
-  response.render('passwordReset')
-})
+    const session = new Session({
+      session_id: crypto.randomBytes(8).toString('hex'),
+      started_by: user._id
+    });
+    await session.save();
 
+    const { date, time } = getBerlinTime(session.createdAt);
 
-app.post('/passwordReset',
-  body('email').isString().isLength({ max: 50 }).isEmail().escape(),
-  body('password').isString().isLength({ min:10, max: 20 }).withMessage("invalid password").matches(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{10,20}$/).withMessage('Password must be atleast 10 characters long').escape(),
-  body('confirm_password').isString().isLength({  min:10, max: 20  }).custom((value, { req }) => {
-    if (value !== req.body.password) { 
-      throw new Error('Passwords do not match')}
-      return true}),
-  async(request,response) => {
-  try{ 
-      validationResult(request).throw()
-      //console.log('BODY:', request.body)
-
-      const password = request.body.password
-      const confirm_password = request.body.confirm_password
-      const email = request.body.email
-      if (confirm_password !== password){
-        const message= "password does not match"
-        response.redirect('/passwordReset?message='+encodeURIComponent(message))
-      }
-
-      const salt = await generatedSalt()
-      const hashedPassword = await hashPassword(request.body.password, salt)
-
-      const resetPassword = await User.findOneAndUpdate({email :email},{ password: hashedPassword },{ new: true })
-
-      response.redirect('/?message=User+updated+successfully')
-
-  }catch(error){
-      console.error(error)
-      if (Array.isArray(error.errors)) {
-        console.log("All validation errors:")
-        console.log(error.errors)
-        const messages = error.errors.map(err => err.msg)
-        let firstMessage = messages[0]
-        if (firstMessage == 'Invalid value'){
-          firstMessage = "invalid Email"
-          return response.redirect('/passwordReset?message='+encodeURIComponent(firstMessage))
-        }
-        return response.redirect('/passwordReset?message='+encodeURIComponent(firstMessage))
-  
-      }
-
-  }
-})
-
-
-
-
-
-app.get('/dashboard',authenticateToken, async (request, response) => {
+    // Set custom session cookie
+    sessionCookie = { id: session.id, session_id: session.session_id, date, time };
+    res.cookie('sessionCookie', sessionCookie, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Strict',
+      maxAge: 3600000
+    });
+    }
     
-    const { page = 1, limit = 6 } = request.query
+    const { page = 1, limit = 6 } = req.query
 
     const clients = await Client.find({}).sort({ updatedAt: -1 }).limit(limit * 1).skip((page - 1) * limit).exec()
     const onlineCount = clients.filter(client => client.status === 'online').length
@@ -282,25 +145,26 @@ app.get('/dashboard',authenticateToken, async (request, response) => {
     ]
     //console.log("THE SESSION COOKIES!!!")
   
-    // const loggedInUser = request.user
+    const loggedInUser = user
     // console.log(loggedInUser)
-    const currentSessionId =request.cookies.sessionCookie
-    // =request.session._id
+    const currentSessionId =sessionCookie
+    // console.log(`session cookie is ${currentSessionId}`)
+    // =req.session._id
 
     // console.log("logged in user in dashoute",loggedInUser)
     //console.log(clients)
-    response.render('dashboard',{clients,onlineCount,offlineCount,currentSessionId,commandCategories,totalPages,currentPage: Number(page)})
+    res.render('dashboard',{clients,onlineCount,loggedInUser,offlineCount,currentSessionId,commandCategories,totalPages,currentPage: Number(page)})
 })
 
 
 
-app.get('/sessions',authenticateToken, async (request,response) => {
+app.get('/sessions',authenticateToken, async (req,res) => {
   try{
     
-    const page = parseInt(request.query.page) || 1
-    const sessionpage = parseInt(request.query.page) || 1
-    const clientlimit = parseInt(request.query.clientlimit) || 6
-    const sessionlimit = parseInt(request.query.sessionlimit) || 10
+    const page = parseInt(req.query.page) || 1
+    const sessionpage = parseInt(req.query.page) || 1
+    const clientlimit = parseInt(req.query.clientlimit) || 6
+    const sessionlimit = parseInt(req.query.sessionlimit) || 10
 
     const clients = await Client.find({}).sort({ updatedAt: -1 }).limit(clientlimit * 1).skip((page - 1) * clientlimit).exec()
     const onlineCount = clients.filter(client => client.status === 'online').length
@@ -310,8 +174,8 @@ app.get('/sessions',authenticateToken, async (request,response) => {
     const totalPages = Math.ceil(clientcount / clientlimit)
 
     // console.log('Clients fetched:', clients)
-    const currentSessionId =request.cookies.sessionCookie
-    const loggedInUser = response.locals.loggedInUser
+    const currentSessionId =req.cookies.sessionCookie
+    const loggedInUser = res.locals.loggedInUser
     let sessions
     if (loggedInUser.isAdmin){
       sessions= await Session.find({}).sort({ updatedAt: -1 }).limit(sessionlimit * 1).skip((page - 1) * sessionlimit).exec()
@@ -321,17 +185,17 @@ app.get('/sessions',authenticateToken, async (request,response) => {
     const sessioncount = await Session.countDocuments()
     const sessiontotalPages = Math.ceil(sessioncount / sessionlimit)
     // console.log("The current session logs are",sessions)
-    const search = request.query.search?.trim()?.toLowerCase();
+    const search = req.query.search?.trim()?.toLowerCase();
     if (search) {
       sessions = sessions.filter(session => 
         session.session_id?.toLowerCase().includes(search))
     }
 
 
-    if (request.xhr) {
-      return response.render('sessions/_table', { sessions })
+    if (req.xhr) {
+      return res.render('sessions/_table', { sessions })
     }
-    response.render('sessions/index',{clients,onlineCount,offlineCount,sessions,currentSessionId,totalPages,currentPage: Number(page),sessiontotalPages,sessionPage: Number(sessionpage)})
+    res.render('sessions/index',{clients,onlineCount,offlineCount,sessions,currentSessionId,totalPages,currentPage: Number(page),sessiontotalPages,sessionPage: Number(sessionpage)})
     
   }catch (error){
     console.error('Error fetching clients:', error)
@@ -339,10 +203,10 @@ app.get('/sessions',authenticateToken, async (request,response) => {
 })
 
 
-app.get('/sessions/:session_id',authenticateToken, async (request,response) => {
+app.get('/sessions/:session_id',authenticateToken, async (req,res) => {
   try{
-    const currentSessionId =request.cookies.sessionCookie
-    const session_id = request.params.session_id
+    const currentSessionId =req.cookies.sessionCookie
+    const session_id = req.params.session_id
    
     
     const session = await Session.findOne({ session_id })
@@ -355,7 +219,7 @@ app.get('/sessions/:session_id',authenticateToken, async (request,response) => {
       const commands = await Command.find({ client_id: client._id, session_id: session._id }).exec()
 
       const commandsWithResponses = await Promise.all(commands.map(async (command) => {
-        const commandResponse = await CommandResponse.findOne({ command_id: command._id }).exec()
+        const commandResponse = await commandresponse.findOne({ command_id: command._id }).exec()
 
         command.commandResponse = commandResponse
         return command
@@ -371,16 +235,16 @@ app.get('/sessions/:session_id',authenticateToken, async (request,response) => {
       clients: populatedClients,
     }
     console.log("individual session data",sessionData )
-    response.render('sessions/show',{sessionData, currentSessionId})
+    res.render('sessions/show',{sessionData, currentSessionId})
 
   }catch (error){
     console.error('Error fetching clients:', error)
-    response.status(404).send(error)
+    res.status(404).send(error)
   }
 })
 
-app.get('/exportsession/:session_id',authenticateToken, async (request, response) => {
-  const session_id = request.params.session_id
+app.get('/exportsession/:session_id',authenticateToken, async (req, res) => {
+  const session_id = req.params.session_id
   //console.log("SESSION EX",session_id)
   //console.log(session_id)
   try{
@@ -393,7 +257,7 @@ app.get('/exportsession/:session_id',authenticateToken, async (request, response
       const commands = await Command.find({ client_id: client._id, session_id: session._id }).exec()
 
       const commandsWithResponses = await Promise.all(commands.map(async (command) => {
-        const commandResponse = await CommandResponse.findOne({ command_id: command._id }).exec()
+        const commandResponse = await commandresponse.findOne({ command_id: command._id }).exec()
 
         command.commandResponse = commandResponse
         return command
@@ -413,7 +277,7 @@ app.get('/exportsession/:session_id',authenticateToken, async (request, response
         commands: client.commands.map(cmd => ({
           command_text: cmd.command_text,
           executed_at: cmd.createdAt,
-          response: cmd.commandResponse?.response_text || 'No response'
+          res: cmd.commandResponse?.response_text || 'No res'
         }))
       }
     }
@@ -425,14 +289,14 @@ app.get('/exportsession/:session_id',authenticateToken, async (request, response
       clients:populatedClients.map(cleanClientData)
     }
     const sessionDataString = JSON.stringify(sessionData, null, 2)
-    response.setHeader('Content-Type', 'text/plain');
-    response.setHeader('Content-Disposition', `attachment; filename=${session.session_id}-session-export.txt`)
-    response.send(sessionDataString)
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', `attachment; filename=${session.session_id}-session-export.txt`)
+    res.send(sessionDataString)
 
   }
   catch (error){
     console.error('Error exporting session:', error)
-    response.status(500).send('Server Error')
+    res.status(500).send('Server Error')
   }
 })
 
@@ -440,8 +304,8 @@ app.get('/exportsession/:session_id',authenticateToken, async (request, response
 
 
 
-app.get('/newclient',authenticateToken, (request,response) => {
-    response.render('clients/newClient')
+app.get('/newclient',authenticateToken, (req,res) => {
+    res.render('clients/newClient')
 })
 
 app.post('/newclient',
@@ -454,77 +318,77 @@ app.post('/newclient',
     return true
   }),
   
-  async(request,response) => {
+  async(req,res) => {
     try{ 
-        // console.log('BODY:', request.body)
-        validationResult(request).throw()
+        // console.log('BODY:', req.body)
+        validationResult(req).throw()
         
         const newClient = new Client({
             id: uuidv4(),
-            name:request.body.name,
-            mac_address:request.body.mac_address,
-            ip_address:request.body.ip_address
+            name:req.body.name,
+            mac_address:req.body.mac_address,
+            ip_address:req.body.ip_address
         })
 
         await newClient.save()
-        response.redirect('/dashboard?message=Device+added+successfully')
+        res.redirect('/dashboard?message=Device+added+successfully')
     }catch(error){
       console.log("device error")
       console.log(error)
       if (Array.isArray(error.errors)) {
         const firstError = error.errors[0].msg
-        return response.redirect(`/dashboard?message=${encodeURIComponent(firstError)}`)
+        return res.redirect(`/dashboard?message=${encodeURIComponent(firstError)}`)
       }
-      return response.redirect(`/dashboard?message=${encodeURIComponent('Unexpected error occurred')}`)
+      return res.redirect(`/dashboard?message=${encodeURIComponent('Unexpected error occurred')}`)
 
     }
 })
 
-app.get('/clients',authenticateToken, isAdmin, async (request, response) => {
+app.get('/clients',authenticateToken, isAdmin, async (req, res) => {
   const clients = await Client.find({})
-  const currentSessionId =request.cookies.sessionCookie
-  response.render('clients/index', { clients,currentSessionId })
+  const currentSessionId =req.cookies.sessionCookie
+  res.render('clients/index', { clients,currentSessionId })
 })
 
-app.get('/clients/:client_id',authenticateToken, isAdmin, async (request, response) => {
-  const client_id = request.params.client_id
+app.get('/clients/:client_id',authenticateToken, isAdmin, async (req, res) => {
+  const client_id = req.params.client_id
   const selectedClient = await Client.findOne({ _id : client_id})
-  const currentSessionId =request.cookies.sessionCookie
-  response.render('clients/show', { currentSessionId,selectedClient})
+  const currentSessionId =req.cookies.sessionCookie
+  res.render('clients/show', { currentSessionId,selectedClient})
 })
 
-app.post('/clients/:client_id/update',authenticateToken, isAdmin, async (request, response) => {
+app.post('/clients/:client_id/update',authenticateToken, isAdmin, async (req, res) => {
   try {
-    const { name, ip_address } = request.body
-    const client_id = request.params.client_id
+    const { name, ip_address } = req.body
+    const client_id = req.params.client_id
     // console.log("THE CLIENT ID",id)
     const updatedClient = await Client.findOneAndUpdate(
       { _id : client_id},
       {name,ip_address},
       { new: true }
     )
-    const currentSessionId =request.cookies.sessionCookie
-    response.redirect('/clients')
+    const currentSessionId =req.cookies.sessionCookie
+    res.redirect('/clients')
 
 
   }catch (error) {
     console.error(error)
-    response.send('Error:.',error)
+    res.send('Error:.',error)
   }
  
 })
 
-app.post('/clients/:client_id/delete',authenticateToken, isAdmin, async (request, response) => {
+app.post('/clients/:client_id/delete',authenticateToken, isAdmin, async (req, res) => {
   try {
-    await Client.findByIdAndDelete(request.params.client_id)
+    await Client.findByIdAndDelete(req.params.client_id)
     console.log("client deleted")
-    const currentSessionId =request.cookies.sessionCookie
-    response.redirect('/clients')
+    const currentSessionId =req.cookies.sessionCookie
+    res.redirect('/clients')
 
 
   }catch (error) {
     console.error(error)
-    response.send('Error: No client deleted.')
+    res.send('Error: No client deleted.')
   }
  
 })
@@ -535,14 +399,14 @@ app.post('/clients/:client_id/delete',authenticateToken, isAdmin, async (request
 
 app.post('/connect',authenticateToken,
   
-  async (request,response) => {
-    const ip_address = request.body.ip_address//when we put auntentication is should use the logged in user
-    const _id = request.body._id
-    console.log('Cookies received:', request.cookies)
-    const sessionCookie = request.cookies.sessionCookie
+  async (req,res) => {
+    const ip_address = req.body.ip_address//when we put auntentication is should use the logged in user
+    const _id = req.body._id
+    console.log('Cookies received:', req.cookies)
+    const sessionCookie = req.cookies.sessionCookie
     console.log("Session cookie in connect",sessionCookie)
-    console.log('Received request to connect to:', {ip_address })
-    console.log('Received request to connect to ID:', {_id })
+    console.log('Received req to connect to:', {ip_address })
+    console.log('Received req to connect to ID:', {_id })
     try {
       const conn = await connect({
         host: ip_address,
@@ -565,23 +429,23 @@ app.post('/connect',authenticateToken,
       // } else {
       //   console.log(`Client ${_id} ${updatedSession} updated to online`)
       // }
-      // console.log("response",response)
-      console.log('Parsed Cookies:', request.cookies)
-      console.log('Raw Cookie Header:', request.headers.cookie);
+      // console.log("res",res)
+      console.log('Parsed Cookies:', req.cookies)
+      console.log('Raw Cookie Header:', req.headers.cookie);
 
-      response.send({ success: true, message: 'Connected successfully' })
+      res.send({ success: true, message: 'Connected successfully' })
 
     } catch (error) {
         console.log("server ddnt connect -------------")
         console.log(error)
-      response.status(500).json({ error: error.message || error.toString() })
+      res.status(500).json({ error: error.message || error.toString() })
     }
   })
 
-  app.post('/disconnect',async (request, response) => {
-    const _id = request.body
-    const sessionCookie = request.cookies.sessionCookie
-    console.log('Received request to DISconnect to ID:', {_id })
+  app.post('/disconnect',async (req, res) => {
+    const _id = req.body
+    const sessionCookie = req.cookies.sessionCookie
+    console.log('Received req to DISconnect to ID:', {_id })
     console.log(_id)
     const conn = connections.get(_id);
     if (conn) {
@@ -592,20 +456,20 @@ app.post('/connect',authenticateToken,
     onlineClients.delete(_id)
     await removeClientToSession(sessionCookie.id, _id)
     console.log("db status updated to offline")
-    response.send({ success: true, message: 'Disconnected' })
+    res.send({ success: true, message: 'Disconnected' })
   })
 
 
 
   app.post('/sendCommand',authenticateToken,
     body('command').isString().trim().escape(),
-    async (request,response) => {
-    const { command ,category } = request.body
-    const sessionInfo = request.cookies.sessionCookie
-    const userId = request.user._id
+    async (req,res) => {
+    const { command ,category } = req.body
+    const sessionInfo = req.cookies.sessionCookie
+    const userId = req.user._id
     // console.log('USER INFO,',sessionInfo)
-    // const id = request.body.id.id.data
-    // const command = request.body.command
+    // const id = req.body.id.id.data
+    // const command = req.body.command
     // console.log('id is:............................', {_id})
 
 
@@ -616,21 +480,21 @@ app.post('/connect',authenticateToken,
     
       console.log("ONLINE CLIENTS",connectedClientId)
       // console.log("CONNECTION",conn)
-      //console.log('route handler Received request to connect to:', {conn})
+      //console.log('route handler Received req to connect to:', {conn})
 
-      if (!conn) return response.status(400).send({ error: 'Client not connected' })
+      if (!conn) return res.status(400).send({ error: 'Client not connected' })
 
       if (!conn._sock || !conn._sock.readable || !conn._sock.writable) {
-        return response.status(400).send({ error: 'SSH Connection not alive' })
+        return res.status(400).send({ error: 'SSH Connection not alive' })
       }
 
       try {
-        validationResult(request).throw()
+        validationResult(req).throw()
         const allowedCommands = fileAndSystemCommands
 
         const commandName = command.split(" ")[0]
         if (!allowedCommands.includes(commandName)){
-          return response.status(403).send({ error: 'Command not permitted' })
+          return res.status(403).send({ error: 'Command not permitted' })
         }
 
         const output = await sendCommand(conn,commandName)
@@ -653,51 +517,51 @@ app.post('/connect',authenticateToken,
           command_id:newCommand._id,
           response_text:output
         })
-        await newCommandResponse.save()
+        await newCommandres.save()
 
-        console.log("added command Response", newCommandResponse)
-        response.send({ success: true, message: output })
+        console.log("added command res", newCommandResponse)
+        res.send({ success: true, message: output })
 
       } catch (error) {
           console.log(error)
-          response.send({ error })
+          res.send({ error })
       }
     }
     })
 
 
-     app.get('/userManagement',authenticateToken, isAdmin, async (request, response) => {
+     app.get('/userManagement',authenticateToken, isAdmin, async (req, res) => {
       const users = await User.find({})
-      const currentSessionId =request.cookies.sessionCookie
-      response.render('management/users', { users,currentSessionId })
+      const currentSessionId =req.cookies.sessionCookie
+      res.render('management/users', { users,currentSessionId })
     })
 
-    app.get('/userManagement/:user_id',authenticateToken, isAdmin, async (request, response) => {
-      const user_id = request.params.user_id
+    app.get('/userManagement/:user_id',authenticateToken, isAdmin, async (req, res) => {
+      const user_id = req.params.user_id
       const user = await User.findOne({ _id : user_id})
-      const currentSessionId =request.cookies.sessionCookie
-      response.render('management/editUser', { currentSessionId,user })
+      const currentSessionId =req.cookies.sessionCookie
+      res.render('management/editUser', { currentSessionId,user })
     })
 
-    app.post('/userManagement/:user_id/delete',authenticateToken, isAdmin, async (request, response) => {
+    app.post('/userManagement/:user_id/delete',authenticateToken, isAdmin, async (req, res) => {
       try {
-        await User.findByIdAndDelete(request.params.user_id)
+        await User.findByIdAndDelete(req.params.user_id)
         console.log("user deleted")
-        const currentSessionId =request.cookies.sessionCookie
-        response.redirect('/userManagement')
+        const currentSessionId =req.cookies.sessionCookie
+        res.redirect('/userManagement')
 
 
       }catch (error) {
         console.error(error)
-        response.send('Error: No cookie was deleted.')
+        res.send('Error: No cookie was deleted.')
       }
      
     })
 
-    app.post('/userManagement/:user_id/update',authenticateToken, isAdmin, async (request, response) => {
+    app.post('/userManagement/:user_id/update',authenticateToken, isAdmin, async (req, res) => {
       try {
-        const { name, email, isAdmin } = request.body
-        const role = request.body.isAdmin === 'true'
+        const { name, email, isAdmin } = req.body
+        const role = req.body.isAdmin === 'true'
         const updatedUser = await User.findOneAndUpdate(
           {email:email},
           {name,email,isAdmin:!!role },
@@ -705,19 +569,19 @@ app.post('/connect',authenticateToken,
         )
         console.log("USERR UPDATED",updatedUser)
 
-        const currentSessionId =request.cookies.sessionCookie
-        response.redirect('/userManagement')
+        const currentSessionId =req.cookies.sessionCookie
+        res.redirect('/userManagement')
 
 
       }catch (error) {
         console.error(error)
-        response.send('Error:.',error)
+        res.send('Error:.',error)
       }
      
     })
 
 
-    // app.get("/debug-sentry", function mainHandler(request, response) {
+    // app.get("/debug-sentry", function mainHandler(req, res) {
     //   throw new Error("My first Sentry error!");
     // })
     
