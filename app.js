@@ -56,11 +56,9 @@ app.use(express.urlencoded({ extended: true }))
 
 ////middleware
 app.use(cookieParser())
-app.use(setCurrentUser)
+app.use(auth(config))       
+app.use(setCurrentUser)     
 app.use(logger)
-
-app.use(auth(config))
-
 
 
 const connections = new Map()
@@ -98,9 +96,6 @@ app.post('/logout', async(req,res) => {
 app.get('/',requiresAuth(), async (req, res) => {
     let sessionCookie = req.cookies.sessionCookie
     let user
-
-    if (!sessionCookie) {
-    // Create a new session 
     user = await User.findOne({ email: req.oidc.user.email});
 
     if (!user) {
@@ -111,6 +106,10 @@ app.get('/',requiresAuth(), async (req, res) => {
       name: req.oidc.user.name,
       isAdmin: false});
     }
+
+    if (!sessionCookie) {
+    // Create a new session 
+   
 
     const session = new Session({
       session_id: crypto.randomBytes(8).toString('hex'),
@@ -146,6 +145,7 @@ app.get('/',requiresAuth(), async (req, res) => {
     //console.log("THE SESSION COOKIES!!!")
   
     const loggedInUser = user
+    // console.log("logging in logged in user!!!")
     // console.log(loggedInUser)
     const currentSessionId =sessionCookie
     // console.log(`session cookie is ${currentSessionId}`)
@@ -158,7 +158,7 @@ app.get('/',requiresAuth(), async (req, res) => {
 
 
 
-app.get('/sessions',authenticateToken, async (req,res) => {
+app.get('/sessions',requiresAuth(), async (req,res) => {
   try{
     
     const page = parseInt(req.query.page) || 1
@@ -203,7 +203,7 @@ app.get('/sessions',authenticateToken, async (req,res) => {
 })
 
 
-app.get('/sessions/:session_id',authenticateToken, async (req,res) => {
+app.get('/sessions/:session_id',requiresAuth(), async (req,res) => {
   try{
     const currentSessionId =req.cookies.sessionCookie
     const session_id = req.params.session_id
@@ -243,7 +243,7 @@ app.get('/sessions/:session_id',authenticateToken, async (req,res) => {
   }
 })
 
-app.get('/exportsession/:session_id',authenticateToken, async (req, res) => {
+app.get('/exportsession/:session_id',requiresAuth(), async (req, res) => {
   const session_id = req.params.session_id
   //console.log("SESSION EX",session_id)
   //console.log(session_id)
@@ -304,7 +304,7 @@ app.get('/exportsession/:session_id',authenticateToken, async (req, res) => {
 
 
 
-app.get('/newclient',authenticateToken, (req,res) => {
+app.get('/newclient',requiresAuth(), (req,res) => {
     res.render('clients/newClient')
 })
 
