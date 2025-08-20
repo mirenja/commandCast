@@ -1,35 +1,42 @@
-import express from 'express'
-import { authenticateToken } from '../middlewares/authenticateToken.js'
-import { isAdmin } from '../middlewares/isAdmin.js'
-import { Client } from '../models/client.js'
+import express from "express" 
+import pkg from "express-openid-connect"
 
-const router = express.Router()
+import { ensureUserFromOIDC } from "../services/userService.js" 
+import { ensureSessionCookie } from "../services/sessionCookieService.js" 
+import { getClientsPaginatedAndStats } from "../services/clientService.js" 
+import { commandCategories } from "../config/constants.js" 
 
-router.get('/dashboard',authenticateToken, async (request, response) => {
-    
-    const { page = 1, limit = 6 } = request.query
+const { requiresAuth } = pkg
+const router = express.Router() 
 
-    const clients = await Client.find({}).sort({ updatedAt: -1 }).limit(limit * 1).skip((page - 1) * limit).exec()
-    const onlineCount = clients.filter(client => client.status === 'online').length
-    const offlineCount = clients.filter(client => client.status === 'offline').length
-    const count = await Client.countDocuments()
-    const totalPages = Math.ceil(count / limit)
-    const commandCategories = [
-      'General Monitoring',
-      'System Info',
-      'Networking',
-      'Configuration'
-    ]
-    //console.log("THE SESSION COOKIES!!!")
-  
-    // const loggedInUser = request.user
-    // console.log(loggedInUser)
-    const currentSessionId =request.cookies.sessionCookie
-    // =request.session._id
 
-    // console.log("logged in user in dashoute",loggedInUser)
-    //console.log(clients)
-    response.render('dashboard',{clients,onlineCount,offlineCount,currentSessionId,commandCategories,totalPages,currentPage: Number(page)})
-})
+router.get("/", requiresAuth(), async (req, res) => {
+try {
+const user = await ensureUserFromOIDC(req.oidc.user) 
 
-export default router
+const sessionCookie = await ensureSessionCookie(req, res, user) 
+const page = Number(req.query.page) || 1 
+const limit = Number(req.query.limit) || 6 
+
+
+const { clients, onlineCount, offlineCount, totalPages, currentPage } =
+await getClientsPaginatedAndStats({ page, limit }) 
+
+res.render("dashboard", {
+clients,
+onlineCount,
+offlineCount,
+loggedInUser: user,
+currentSessionId: sessionCookie,
+commandCategories,
+totalPages,
+currentPage,
+}) 
+} catch (err) {
+console.error("Error in dashboard route:", err) 
+res.redirect("/login?message=" + encodeURIComponent("Unexpected error")) 
+}
+}) 
+
+
+export default router 
