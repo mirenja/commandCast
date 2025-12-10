@@ -7,7 +7,6 @@ const { requiresAuth } = pkg
 
 const router = express.Router() 
 
-// POST /sendCommand
 router.post(
   "/sendCommand",
   requiresAuth(),

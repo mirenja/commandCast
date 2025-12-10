@@ -13,6 +13,7 @@ export async function addClientToSession(sessionId,clientId){
     return session
 }
 
+
 export async function removeClientToSession(sessionId,clientId){
     const session = await Session.findById(sessionId)
 

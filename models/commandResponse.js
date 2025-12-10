@@ -9,4 +9,4 @@ const commandResponseSchema = new Schema({
 
 commandResponseSchema.index({ command_id: 1 })
 
-export const CommandResponse = mongoose.model('CommandResponse', commandResponseSchema)
+export const CommandResponse =mongoose.models.CommandResponse || mongoose.model('CommandResponse', commandResponseSchema)

@@ -15,4 +15,4 @@ const clientSchema = new Schema({
 
 clientSchema.index({ sessions: 1 })
 
-export const Client = mongoose.model('Client',clientSchema)
+export const Client = mongoose.models.Client||mongoose.model('Client',clientSchema)

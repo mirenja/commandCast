@@ -14,4 +14,4 @@ commandSchema.index({ session_id: 1 })
 commandSchema.index({ client_id: 1 })
 commandSchema.index({ sent_by: 1 })
 
-export const Command = mongoose.model('Command', commandSchema)
+export const Command = mongoose.models.Command||mongoose.model('Command', commandSchema)

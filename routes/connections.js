@@ -13,18 +13,20 @@ export default function (connections, onlineClients) {
   const router = express.Router() 
 
 
-  // Connect client
   router.post("/connect", async (req, res) => {
     try {
       const { ip_address, _id } = req.body 
       const sessionCookie = req.cookies.sessionCookie 
+      const statusOnline = statusOnline
+      const statusOffline = statusOffline
+
 
       const conn = new SSHClient() 
       conn.on("ready", async () => {
         connections.set(_id, conn) 
-        onlineClients.set(_id, { status: "online" }) 
+        onlineClients.set(_id, { status: statusOnline }) 
 
-        await Client.findByIdAndUpdate(_id, { status: "online" }, { new: true }) 
+        await Client.findByIdAndUpdate(_id, { status: statusOnline }, { new: true }) 
         if (sessionCookie) await addClientToSession(sessionCookie.id, _id) 
 
         return res.send({ success: true, message: "Connected successfully" }) 
@@ -36,7 +38,6 @@ export default function (connections, onlineClients) {
     }
   }) 
 
-  // Disconnect client
   router.post("/disconnect", async (req, res) => {
     try {
       const _id = req.body 
@@ -49,7 +50,7 @@ export default function (connections, onlineClients) {
       }
 
       onlineClients.delete(_id) 
-      await Client.findByIdAndUpdate(_id, { status: "offline" }, { new: true }) 
+      await Client.findByIdAndUpdate(_id, { status: statusOffline }, { new: true }) 
       if (sessionCookie) await removeClientToSession(sessionCookie.id, _id) 
 
       return res.send({ success: true, message: "Disconnected" }) 

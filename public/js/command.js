@@ -6,12 +6,6 @@
     
     //const onlineClients = clients.filter(client => client.status === 'online') ///actual app
     //dev server
-
-
-
-
-   
-
     const command = document.getElementById('commandInput').value
     const category = document.getElementById('categorySelect').value
   

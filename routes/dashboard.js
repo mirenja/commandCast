@@ -22,19 +22,10 @@ const limit = Number(req.query.limit) || 6
 const { clients, onlineCount, offlineCount, totalPages, currentPage } =
 await getClientsPaginatedAndStats({ page, limit }) 
 
-res.render("dashboard", {
-clients,
-onlineCount,
-offlineCount,
-loggedInUser: user,
-currentSessionId: sessionCookie,
-commandCategories,
-totalPages,
-currentPage,
-}) 
+res.render("dashboard", {clients,onlineCount,offlineCount,loggedInUser: user,currentSessionId: sessionCookie,commandCategories,totalPages,currentPage,}) 
 } catch (err) {
-console.error("Error in dashboard route:", err) 
-res.redirect("/login?message=" + encodeURIComponent("Unexpected error")) 
+    console.error("Error in dashboard route:", err) 
+    res.redirect("/login?message=" + encodeURIComponent("Unexpected error")) 
 }
 }) 
 

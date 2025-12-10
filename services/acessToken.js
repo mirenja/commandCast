@@ -23,7 +23,7 @@ export async  function  validateUser(email,password){
     console.log("validating the user...")
     const user = await User.findOne({email:email}).exec()
      console.log('Found user?', !!user)
-    //console.log('validate use rfunction returns:',user)
+    //console.log('validate use function returns:',user)
 
     if (!user){
         throw new Error('User not found')
