@@ -9,7 +9,7 @@ terraform {
   }
 
   backend "gcs" {
-    bucket = "your-terraform-state-bucket"  # replace this with your GCS bucket name
+    bucket = "your-terraform-state-bucket" 
     prefix = "terraform/state"
   }
 }
